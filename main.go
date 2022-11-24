@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strconv"
 
 	"os"
 
@@ -93,7 +94,7 @@ func main() {
 
 	//var baseURL = "http://localhost:3000/"
 	//var baseURL = "https://ikytest-gw0gy01is-s0lidarnost.vercel.app/"
-	var baseURL = myenv["BASEURL"];
+	//var baseURL = myenv["BASEURL"];
 
 
 
@@ -226,26 +227,48 @@ func main() {
 
 				case 2:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
-						if update.Message.Text == "WhoIs" {
-							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, msgTemplates["who_is"])
-							msg.ReplyMarkup = optionKeyboard
+						if update.Message.Document ==  *&update.Message.Document {
+							caption := update.Message.Caption
+							//file_id := update.Message.Document.FileID
+							//u_file_id := update.Message.Document.FileUniqueID
+							file_name :=update.Message.Document.FileName
+							file_type := update.Message.Document.MimeType
+							file_size := update.Message.Document.FileSize
+							file_size_string := strconv.Itoa(file_size)
+							//msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "unique_file id is:" + u_file_id)
+							//msg.ReplyMarkup = 
+							//bot.Send(msg)
+							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "caption is:" + caption)
 							bot.Send(msg)
-							//updateDb.dialog_status = 3
-							//userDatabase[update.Message.From.ID] = updateDb
+							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_name is:" + file_name)
+							bot.Send(msg)
+							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_type is:" + file_type)
+							bot.Send(msg)
+							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_size is:" + file_size_string)
+							bot.Send(msg)
+							updateDb.dialog_status = 3
+							userDatabase[update.Message.From.ID] = updateDb
+						} else {
+							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "you should send me a file")
+							bot.Send(msg)
+							updateDb.dialog_status = 2
+							userDatabase[update.Message.From.ID] = updateDb
 						}
 					}
 
 				// whois
 				case 3:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
-	
+						updateDb.dialog_status = 3
+						userDatabase[update.Message.From.ID] = updateDb
 
 					}
 
 				// 
 				case 4:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
-
+						updateDb.dialog_status = 3
+						userDatabase[update.Message.From.ID] = updateDb
 					}
 
 
