@@ -227,18 +227,21 @@ func main() {
 
 				case 2:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
-						if update.Message.Document ==  *&update.Message.Document {
+						if update.Message.Document != nil {
 							caption := update.Message.Caption
-							//file_id := update.Message.Document.FileID
-							//u_file_id := update.Message.Document.FileUniqueID
+							file_id := update.Message.Document.FileID
+							u_file_id := update.Message.Document.FileUniqueID
 							file_name :=update.Message.Document.FileName
 							file_type := update.Message.Document.MimeType
 							file_size := update.Message.Document.FileSize
 							file_size_string := strconv.Itoa(file_size)
-							//msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "unique_file id is:" + u_file_id)
+							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "unique_file id is:" + u_file_id)
 							//msg.ReplyMarkup = 
-							//bot.Send(msg)
-							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "caption is:" + caption)
+							bot.Send(msg)
+							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_id is:" + file_id)
+							bot.Send(msg)
+							
+							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "caption is:" + caption)
 							bot.Send(msg)
 							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_name is:" + file_name)
 							bot.Send(msg)
@@ -246,10 +249,18 @@ func main() {
 							bot.Send(msg)
 							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_size is:" + file_size_string)
 							bot.Send(msg)
+							direct_url, err := bot.GetFileDirectURL(file_id)
+							if err != nil {
+								log.Println(err)
+							}
+							fmt.Println(direct_url)
+							log.Println(direct_url)
+							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "direct URL is:" + direct_url)
+							bot.Send(msg)
 							updateDb.dialog_status = 3
 							userDatabase[update.Message.From.ID] = updateDb
 						} else {
-							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "you should send me a file")
+							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "you should send me a file AS A DOCUMENT")
 							bot.Send(msg)
 							updateDb.dialog_status = 2
 							userDatabase[update.Message.From.ID] = updateDb
