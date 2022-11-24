@@ -253,10 +253,27 @@ func main() {
 							if err != nil {
 								log.Println(err)
 							}
+							
+							/*
+							file_config := tgbotapi.FileConfig{
+								FileID: file_id,
+							}
+							file,err := bot.GetFile(file_config)
+							if err != nil {
+								log.Println(err)
+							}
+							o_file_id := file.FileID
+							log.Println(o_file_id)
+							*/
+							
+							//bot.UploadFiles("https://telegra.ph/upload",tgbotapi.Params{},[]tgbotapi.RequestFile{})
+							
 							fmt.Println(direct_url)
 							log.Println(direct_url)
 							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "direct URL is:" + direct_url)
 							bot.Send(msg)
+							//TODO: make a POST query to telegraph!
+							// 
 							updateDb.dialog_status = 3
 							userDatabase[update.Message.From.ID] = updateDb
 						} else {
