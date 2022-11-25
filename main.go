@@ -34,10 +34,7 @@ var yesNoKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton("No")),
 )
 
-var optionKeyboard = tgbotapi.NewReplyKeyboard(
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("WhoIs"),),
-)
+
 
 
 var mainKeyboard = tgbotapi.NewReplyKeyboard(
@@ -217,7 +214,7 @@ func main() {
 				case 1:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
 						msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, msgTemplates["case1"])
-						msg.ReplyMarkup = optionKeyboard
+						//msg.ReplyMarkup = optionKeyboard
 						bot.Send(msg)
 						updateDb.dialog_status = 2
 						userDatabase[update.Message.From.ID] = updateDb
@@ -255,8 +252,8 @@ func main() {
 							
 							// download a file
 							file := createFile(file_name)
-							putFile(file,httpClient(),direct_url,file_name)
-							telegraph_link := uploadFileToTelegraph(file_name)
+							GetFile(file,httpClient(),direct_url,file_name)
+							telegraph_link := UploadFileToTelegraph(file_name)
 
 							/*
 							file_config := tgbotapi.FileConfig{
@@ -329,7 +326,7 @@ func loadEnv() {
 
 
 // download file
-func putFile(file *os.File, client *http.Client, url string, file_name string) {
+func GetFile(file *os.File, client *http.Client, url string, file_name string) {
     resp, err := client.Get(url)
 
     checkError(err)
@@ -346,7 +343,7 @@ func putFile(file *os.File, client *http.Client, url string, file_name string) {
 }
 
 
-func uploadFileToTelegraph(file_name string) (string)  {
+func UploadFileToTelegraph(file_name string) (string)  {
 
 	file, _ := os.Open(file_name)
 	// os.File is io.Reader so just pass it.

@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/MoonSHRD/IKY-telegram-bot v0.2.1
+	github.com/StarkBotsIndustries/telegraph/v2 v2.0.0
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/joho/godotenv v1.4.0
@@ -11,7 +12,6 @@ require (
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 // indirect
-	github.com/StarkBotsIndustries/telegraph/v2 v2.0.0 // indirect
 	github.com/anaskhan96/soup v1.2.5 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/deckarep/golang-set v1.8.0 // indirect
