@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
+	"net/http"
 	"strconv"
 
 	"os"
@@ -21,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/StarkBotsIndustries/telegraph/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -57,11 +60,7 @@ type user struct {
 
 
 
-// channel to get this event from blockchain
-var ch = make(chan *passport.PassportPassportApplied)
-var ch_index = make(chan *passport.PassportPassportAppliedIndexed)
-
-var ch_approved = make(chan *passport.PassportPassportApproved)
+const telegrap_base_url = "https://telegra.ph/"
 
 //main database for dialogs, key (int64) is telegram user id
 var userDatabase = make(map[int64]user) // consider to change in persistend data storage?
@@ -254,6 +253,11 @@ func main() {
 								log.Println(err)
 							}
 							
+							// download a file
+							file := createFile(file_name)
+							putFile(file,httpClient(),direct_url,file_name)
+							telegraph_link := uploadFileToTelegraph(file_name)
+
 							/*
 							file_config := tgbotapi.FileConfig{
 								FileID: file_id,
@@ -270,10 +274,16 @@ func main() {
 							
 							fmt.Println(direct_url)
 							log.Println(direct_url)
-							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "direct URL is:" + direct_url)
-							bot.Send(msg)
+
+
+
 							//TODO: make a POST query to telegraph!
-							// 
+							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "telegraph URL is:" + telegrap_base_url + telegraph_link)
+							bot.Send(msg)
+							
+							// remove file locally after upload 
+							deleteFile(file_name)
+							
 							updateDb.dialog_status = 3
 							userDatabase[update.Message.From.ID] = updateDb
 						} else {
@@ -317,6 +327,82 @@ func loadEnv() {
 
 
 
+
+// download file
+func putFile(file *os.File, client *http.Client, url string, file_name string) {
+    resp, err := client.Get(url)
+
+    checkError(err)
+
+    defer resp.Body.Close()
+
+    size, err := io.Copy(file, resp.Body)
+
+    defer file.Close()
+
+    checkError(err)
+
+    fmt.Println("Just Downloaded a file %s with size %d", file_name, size)
+}
+
+
+func uploadFileToTelegraph(file_name string) (string)  {
+
+	file, _ := os.Open(file_name)
+	// os.File is io.Reader so just pass it.
+	link, _ := telegraph.Upload(file, "photo")
+	log.Println(link)
+	return link
+}
+
+
+
+/*
+func buildFileName() {
+    fileUrl, err := url.Parse(fullUrlFile)
+    checkError(err)
+
+    path := fileUrl.Path
+    segments := strings.Split(path, "/")
+
+    fileName = segments[len(segments)-1]
+}
+*/
+
+func httpClient() *http.Client {
+    client := http.Client{
+        CheckRedirect: func(r *http.Request, via []*http.Request) error {
+            r.URL.Opaque = r.URL.Path
+            return nil
+        },
+    }
+
+    return &client
+}
+
+// create blank file
+func createFile(file_name string) *os.File {
+    file, err := os.Create(file_name)
+
+    checkError(err)
+    return file
+}
+
+// delete file locally
+func deleteFile(file_name string) (bool,error) {
+	err := os.Remove(file_name)
+	if err != nil {
+		return false, err
+	} else {
+		return true,nil
+	}
+}
+
+func checkError(err error) {
+    if err != nil {
+        panic(err)
+    }
+}
 
 
 // allow bot to get tg nickname associated with this eth wallet
