@@ -16,12 +16,13 @@ import (
 	passport "github.com/MoonSHRD/IKY-telegram-bot/artifacts/TGPassport"
 	//passport "IKY-telegram-bot/artifacts/TGPassport"
 
-	//SingletonNFT "github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/SingletonNFT"
+	SingletonNFT "github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/SingletonNFT"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/event"
 
 	"github.com/StarkBotsIndustries/telegraph/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -53,7 +54,9 @@ type user struct {
 	dialog_status int64
 }
 
-
+// channel to get this event from blockchain
+var ch = make(chan *SingletonNFT.SingletonNFTItemCreated)
+//var ch_index = make(chan *passport.PassportPassportAppliedIndexed)
 
 
 
@@ -81,7 +84,7 @@ func main() {
 
 	msgTemplates["hello"] = "Hey, this bot is allowing you to create NFT"
 	msgTemplates["case0"] = "Open following link in metamask broswer"
-	msgTemplates["await"] = "Awaiting for verification"
+	msgTemplates["await"] = "Awaiting for NFT mint"
 	msgTemplates["case1"] = "Send me a _single_ file which u want to transform into NFT"
 	msgTemplates["who_is"] = "Input wallet address to know it's associated telegram nickname"
 	msgTemplates["not_registred"] = "You are not registred yet, first attach your wallet to your tg account via this bot https://t.me/E_Passport_bot"
@@ -91,7 +94,7 @@ func main() {
 	//var baseURL = "http://localhost:3000/"
 	//var baseURL = "https://ikytest-gw0gy01is-s0lidarnost.vercel.app/"
 	//var baseURL = myenv["BASEURL"];
-
+	var baseURL = "https://telegram-nft-wizard.vercel.app/"
 
 
 	bot, err = tgbotapi.NewBotAPI(string(tgApiKey))
@@ -128,6 +131,11 @@ func main() {
 		log.Fatalf("Failed to instantiate a TGPassport contract: %v", err)
 	}
 
+	singletonCollection, err := SingletonNFT.NewSingletonNFT(common.HexToAddress(myenv["SINGLETON_ADDRESS"]), client)
+	if err != nil {
+		log.Fatalf("Failed to instantiate a SingletonNFT contract: %v", err)
+	}
+
 	// Wrap the Passport contract instance into a session
 	session := &passport.PassportSession{
 		Contract: passportCenter,
@@ -146,6 +154,26 @@ func main() {
 	}
 
 	log.Printf("session with passport center initialized")
+
+
+	//Wrap SingletonNFT contract instance into a session
+	session_single_nft := &SingletonNFT.SingletonNFTSession{
+		Contract: singletonCollection,
+		CallOpts: bind.CallOpts{
+			Pending: true,
+			From: auth.From,
+			Context: context.Background(),
+		},
+		TransactOpts: bind.TransactOpts{
+			From: auth.From,
+			Signer: auth.Signer,
+			GasLimit: 0,
+			GasFeeCap: nil,
+			GasTipCap: nil,
+			Context: context.Background(),
+		},
+	}
+	log.Printf("session with singleton NFT initialized")
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
@@ -184,6 +212,9 @@ func main() {
 						updateDb.dialog_status = 0
 						userDatabase[update.Message.From.ID] = updateDb
 						} else {
+							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, msgTemplates["hello"])
+							msg.ReplyMarkup = mainKeyboard
+							bot.Send(msg)
 							updateDb.dialog_status = 1
 							userDatabase[update.Message.From.ID] = updateDb
 						}
@@ -211,6 +242,7 @@ func main() {
 						
 					}
 				//	fallthrough // МЫ ЛЕД ПОД НОГАМИ МАЙОРА!
+				// choose option
 				case 1:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
 						msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, msgTemplates["case1"])
@@ -220,7 +252,7 @@ func main() {
 						userDatabase[update.Message.From.ID] = updateDb
 						
 					}
-
+				// download file from user and upload to telegraph
 				case 2:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
 						if update.Message.Document != nil {
@@ -255,31 +287,30 @@ func main() {
 							GetFile(file,httpClient(),direct_url,file_name)
 							telegraph_link := UploadFileToTelegraph(file_name)
 
-							/*
-							file_config := tgbotapi.FileConfig{
-								FileID: file_id,
-							}
-							file,err := bot.GetFile(file_config)
-							if err != nil {
-								log.Println(err)
-							}
-							o_file_id := file.FileID
-							log.Println(o_file_id)
-							*/
 							
-							//bot.UploadFiles("https://telegra.ph/upload",tgbotapi.Params{},[]tgbotapi.RequestFile{})
+
 							
 							fmt.Println(direct_url)
 							log.Println(direct_url)
 
 
-
-							//TODO: make a POST query to telegraph!
+							//bot.UploadFiles("https://telegra.ph/upload",tgbotapi.Params{},[]tgbotapi.RequestFile{})
 							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "telegraph URL is:" + telegrap_base_url + telegraph_link)
 							bot.Send(msg)
 							
 							// remove file locally after upload 
 							deleteFile(file_name)
+
+
+							// create link to mint NFT
+							createLink(userDatabase[update.Message.From.ID].tgid,file_name,baseURL)
+
+							subscription, err := SubscribeForCreateItem(session_single_nft, ch) // this is subscription to UNINDEXED event. 
+							if err != nil {
+								log.Println(err)
+							}
+
+							go AsyncCreateItemListener(ctx,subscription,userDatabase[update.Message.From.ID].tgid,auth,userDatabase)
 							
 							updateDb.dialog_status = 3
 							userDatabase[update.Message.From.ID] = updateDb
@@ -291,18 +322,27 @@ func main() {
 						}
 					}
 
-				// whois
+				// await for mint
 				case 3:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
+
+
+						msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, msgTemplates["await"])
+						//msg.ReplyMarkup = optionKeyboard
+						bot.Send(msg)
+
 						updateDb.dialog_status = 3
 						userDatabase[update.Message.From.ID] = updateDb
 
 					}
 
-				// 
+				// mint successfull(?)
 				case 4:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
-						updateDb.dialog_status = 3
+						msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "Your NFT is succesfully minted, you will redirect to main menu")
+						//msg.ReplyMarkup = optionKeyboard
+						bot.Send(msg)
+						updateDb.dialog_status = 1
 						userDatabase[update.Message.From.ID] = updateDb
 					}
 
@@ -322,7 +362,14 @@ func loadEnv() {
 	}
 }
 
-
+func createLink(tgid int64,file_name string, base_url string)  {
+	
+	msg := tgbotapi.NewMessage(tgid, "Open following link in metamask browser and click CreateNFT!")
+	bot.Send(msg)
+	link := base_url + "?file_id=" + file_name
+	msg = tgbotapi.NewMessage(userDatabase[tgid].tgid, link)
+	bot.Send(msg)
+}
 
 
 // download file
@@ -399,6 +446,49 @@ func checkError(err error) {
     if err != nil {
         panic(err)
     }
+}
+
+// subscribing for CreateItem events. We use watchers without fast-forwarding past events
+func SubscribeForCreateItem(session *SingletonNFT.SingletonNFTSession, listenChannel chan<- *SingletonNFT.SingletonNFTItemCreated) (event.Subscription, error) {
+	subscription, err := session.Contract.WatchItemCreated(&bind.WatchOpts{
+		Start:   nil, //last block
+		Context: nil, // nil = no timeout
+	}, listenChannel,
+//		applierTGID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return subscription, err
+}
+
+func AsyncCreateItemListener(ctx context.Context,subscription event.Subscription, tgid int64, auth *bind.TransactOpts, userDatabase map[int64]user) {
+	EventLoop:
+						for {
+							select {
+							case <-ctx.Done():
+								{
+									subscription.Unsubscribe()
+									break EventLoop
+								}
+							case eventResult := <-ch:
+								{
+									fmt.Println("NFT token ID:", eventResult.TokenId)
+									fmt.Println("NFT collection address:", eventResult.Raw.Address)
+									fmt.Println("File_ID string: ", eventResult.FileId)
+									
+									msg := tgbotapi.NewMessage(userDatabase[tgid].tgid, " your NFT token has been created, token ID is: " + eventResult.TokenId.String())
+									bot.Send(msg)
+									msg = tgbotapi.NewMessage(tgid,"address of NFT collection (add it to metamask): " + eventResult.Raw.Address.Hex())
+									bot.Send(msg)
+									subscription.Unsubscribe()
+									break EventLoop
+								}
+								}
+						}
+						updateDb := userDatabase[tgid]
+						updateDb.dialog_status = 4
+						userDatabase[tgid] = updateDb
 }
 
 
