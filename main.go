@@ -245,7 +245,8 @@ func main() {
 				// download file from user and upload to telegraph
 				case 2:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
-						if update.Message.Document != nil {
+						 
+						if update.Message.Document != nil && update.Message.Document.FileSize <= 5e+6 {
 							caption := update.Message.Caption
 							file_id := update.Message.Document.FileID
 							u_file_id := update.Message.Document.FileUniqueID
@@ -256,17 +257,13 @@ func main() {
 							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "unique_file id is:" + u_file_id)
 							//msg.ReplyMarkup = 
 							bot.Send(msg)
-							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_id is:" + file_id)
-							bot.Send(msg)
 							
-							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "caption is:" + caption)
-							bot.Send(msg)
-							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_name is:" + file_name)
-							bot.Send(msg)
-							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_type is:" + file_type)
-							bot.Send(msg)
-							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "file_size is:" + file_size_string)
-							bot.Send(msg)
+							log.Println("caption:" + caption)
+							log.Println("unique file id: " + u_file_id)
+							log.Println("file id: " + file_id)
+							log.Println("file_type " + file_type)
+							log.Println("file size os: " + file_size_string)
+							
 							direct_url, err := bot.GetFileDirectURL(file_id)
 							if err != nil {
 								log.Println(err)
@@ -287,7 +284,7 @@ func main() {
 							//bot.UploadFiles("https://telegra.ph/upload",tgbotapi.Params{},[]tgbotapi.RequestFile{})
 							msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "telegraph URL is:" + telegrap_base_url + telegraph_link)
 							bot.Send(msg)
-							
+							log.Println("telegraph url: " + telegrap_base_url + telegraph_link)
 							// remove file locally after upload 
 							deleteFile(file_name)
 
@@ -305,7 +302,7 @@ func main() {
 							updateDb.dialog_status = 3
 							userDatabase[update.Message.From.ID] = updateDb
 						} else {
-							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "you should send me a file AS A DOCUMENT")
+							msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, "you should send me a file AS A DOCUMENT and it should be less then 5mbytes")
 							bot.Send(msg)
 							updateDb.dialog_status = 2
 							userDatabase[update.Message.From.ID] = updateDb
