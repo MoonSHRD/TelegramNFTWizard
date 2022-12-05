@@ -14,7 +14,6 @@ import (
 	"github.com/joho/godotenv"
 
 	passport "github.com/MoonSHRD/IKY-telegram-bot/artifacts/TGPassport"
-	//passport "IKY-telegram-bot/artifacts/TGPassport"
 
 	SingletonNFT "github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/SingletonNFT"
 
@@ -68,8 +67,12 @@ var userDatabase = make(map[int64]user) // consider to change in persistend data
 var msgTemplates = make(map[string]string)
 
 
-var tg_id_query = "?user_tg_id="
-var tg_username_query = "&user_tg_name="
+
+var BASEURL = "https://telegram-nft-wizard.vercel.app/"
+var nft_single_url = "createnft/"
+var nft_collection_url = "createcollection/"
+
+
 
 var myenv map[string]string
 
@@ -92,9 +95,9 @@ func main() {
 
 
 	//var baseURL = "http://localhost:3000/"
-	//var baseURL = "https://ikytest-gw0gy01is-s0lidarnost.vercel.app/"
 	//var baseURL = myenv["BASEURL"];
 	var baseURL = "https://telegram-nft-wizard.vercel.app/"
+
 
 
 	bot, err = tgbotapi.NewBotAPI(string(tgApiKey))
@@ -222,26 +225,13 @@ func main() {
 						//msg := tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, msgTemplates["case0"])
 						//bot.Send(msg)
 
-						/*
-						tgid := userDatabase[update.Message.From.ID].tgid
-						user_name := userDatabase[update.Message.From.ID].tg_username
-						fmt.Println(user_name)
-						tgid_string := fmt.Sprint(tgid)
-						tgid_array := make([]int64, 1)
-						tgid_array[0] = tgid
-						link := baseURL + tg_id_query + tgid_string + tg_username_query + "@" + user_name
-						msg = tgbotapi.NewMessage(userDatabase[update.Message.From.ID].tgid, link)
-						bot.Send(msg)
-						*/
-
-					
-						
+	
 
 						//updateDb.dialog_status = 4
 						//userDatabase[update.Message.From.ID] = updateDb
 						
 					}
-				//	fallthrough // МЫ ЛЕД ПОД НОГАМИ МАЙОРА!
+				//	fallthrough //
 				// choose option
 				case 1:
 					if updateDb, ok := userDatabase[update.Message.From.ID]; ok {
@@ -366,24 +356,30 @@ func createLink(tgid int64,file_name string, base_url string)  {
 	
 	msg := tgbotapi.NewMessage(tgid, "Open following link in metamask browser and click CreateNFT!")
 	bot.Send(msg)
-	link := base_url + "?file_id=" + file_name
+	link := base_url + nft_single_url + "?file_id=" + file_name
 	msg = tgbotapi.NewMessage(userDatabase[tgid].tgid, link)
 	bot.Send(msg)
 }
 
+func createLinkCollection (tgid int64, file_names []string) {
+	msg := tgbotapi.NewMessage(tgid, "Open following link in metamask browser and click CreateNFT!")
+	bot.Send(msg)
+	link := BASEURL + nft_single_url + "?file_id="
+	lenght := len(file_names)
+	for i := 0; i< lenght; i++{
+		link = link + file_names[i]
+	}
+	msg = tgbotapi.NewMessage(userDatabase[tgid].tgid, link)
+	bot.Send(msg)
+}
 
 // download file
 func GetFile(file *os.File, client *http.Client, url string, file_name string) {
     resp, err := client.Get(url)
-
     checkError(err)
-
     defer resp.Body.Close()
-
     size, err := io.Copy(file, resp.Body)
-
     defer file.Close()
-
     checkError(err)
 
     fmt.Println("Just Downloaded a file %s with size %d", file_name, size)
