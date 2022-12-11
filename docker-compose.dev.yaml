@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  bot:
+    container_name: nft-wizard-bot
+    image: nft-wizard-bot
+    build:
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - ".env:/app/.env"
