@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   bot:
-    container_name: verifier-bot
+    container_name: nft-wizard-bot
     image: ghcr.io/moonshrd/telegramnftwizard
     restart: always
     volumes:
