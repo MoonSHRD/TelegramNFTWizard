@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"os"
 
@@ -288,9 +289,11 @@ func main() {
 							// remove file locally after upload 
 							deleteFile(file_name)
 
+							uri_short := strings.Split(telegraph_link,"/")
+
 
 							// create link to mint NFT
-							createLink(userDatabase[update.Message.From.ID].tgid,file_name,baseURL)
+							createLink(userDatabase[update.Message.From.ID].tgid,uri_short[2],baseURL)
 
 							subscription, err := SubscribeForCreateItem(session_single_nft, ch) // this is subscription to UNINDEXED event. 
 							if err != nil {
