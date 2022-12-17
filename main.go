@@ -394,17 +394,7 @@ func UploadFileToTelegraph(file_name string) (string)  {
 
 
 
-/*
-func buildFileName() {
-    fileUrl, err := url.Parse(fullUrlFile)
-    checkError(err)
 
-    path := fileUrl.Path
-    segments := strings.Split(path, "/")
-
-    fileName = segments[len(segments)-1]
-}
-*/
 
 func httpClient() *http.Client {
     client := http.Client{
