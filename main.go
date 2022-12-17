@@ -364,7 +364,7 @@ func createLinkCollection (tgid int64, file_names []string) {
 	link := BASEURL + nft_single_url + "?file_id="
 	lenght := len(file_names)
 	for i := 0; i< lenght; i++{
-		link = link + file_names[i]
+		link = link + "?file_id="+ file_names[i]
 	}
 	msg = tgbotapi.NewMessage(userDatabase[tgid].tgid, link)
 	bot.Send(msg)

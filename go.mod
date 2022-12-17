@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/MoonSHRD/IKY-telegram-bot v0.2.1
-	github.com/MoonSHRD/TelegramNFT-Wizard-Contracts v0.2.0
+	github.com/MoonSHRD/TelegramNFT-Wizard-Contracts v0.3.0
 	github.com/StarkBotsIndustries/telegraph/v2 v2.0.0
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
