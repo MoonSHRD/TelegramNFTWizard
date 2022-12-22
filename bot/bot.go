@@ -1,13 +1,11 @@
 package bot
 
 import (
-	"log"
 	"time"
 
 	"github.com/MoonSHRD/TelegramNFTWizard/config"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/blockchain"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/kv"
-	"github.com/MoonSHRD/TelegramNFTWizard/pkg/wizard"
 	tele "gopkg.in/telebot.v3"
 	"gopkg.in/telebot.v3/middleware"
 )
@@ -71,45 +69,4 @@ func (bot *Bot) Start() {
 	bot.Handle(&btnMinted, bot.MintHandler)
 
 	bot.Bot.Start()
-}
-
-// Repeats current state message to user
-func remindingResponse(c tele.Context, client *blockchain.Client, user User) error {
-	switch user.State {
-
-	case Freeroam:
-		if client.IsRegistered(c.Sender().ID) {
-			return c.Send(messages["collectionCreation"], menu)
-		} else {
-			return c.Send(messages["awaitingRegistration"])
-		}
-
-	case CollectionPreparation:
-		return c.Send(messages["awaitingFiles"], completeFiles)
-
-	case CollectionPreparationName:
-		return c.Send(messages["awaitingCollectionName"])
-
-	case CollectionPreparationSymbol:
-		return c.Send(messages["awaitingCollectionSymbol"])
-
-	case CollectionMint:
-		url, err := wizard.CreateCollectionLink(wizard.CollectionOptions{
-			Name:    user.Name,
-			Symbol:  &user.Name,
-			FileIDs: user.FileIDs,
-		})
-		if err != nil {
-			log.Println("failed to create collection link:", err)
-			return c.Send(messages["fail"])
-		}
-
-		mint := &tele.ReplyMarkup{}
-		mint.URL("Mint", url)
-		return c.Send(messages["awaitingCollectionMint"], mint)
-
-	default:
-		// ? - figure out proper response
-		return nil
-	}
 }

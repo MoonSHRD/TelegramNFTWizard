@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/binary"
+	"github.com/MoonSHRD/TelegramNFTWizard/pkg/wizard"
 	"github.com/StarkBotsIndustries/telegraph/v2"
 	"golang.org/x/exp/slices"
 	tele "gopkg.in/telebot.v3"
@@ -25,7 +26,7 @@ func (bot *Bot) StartHandler(c tele.Context) error {
 		}
 
 		// If user stuck he may do `/start` for troubleshooting
-		return remindingResponse(c, bot.client, user)
+		return bot.remindingResponse(c, user)
 	}
 
 	// New user
@@ -52,7 +53,7 @@ func (bot *Bot) CreateCollectionHandler(c tele.Context) error {
 	}
 
 	if user.State != Freeroam {
-		return remindingResponse(c, bot.client, user)
+		return bot.remindingResponse(c, user)
 	}
 
 	// Update state
@@ -77,7 +78,7 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 	}
 
 	if user.State != CollectionPreparation {
-		return remindingResponse(c, bot.client, user)
+		return bot.remindingResponse(c, user)
 	}
 
 	// If limit at the end fails
@@ -130,7 +131,7 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 
 		user.State = CollectionPreparationName
 
-		return remindingResponse(c, bot.client, user)
+		return bot.remindingResponse(c, user)
 	}
 
 	return nil
@@ -162,7 +163,7 @@ func (bot *Bot) OnTextHandler(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	return remindingResponse(c, bot.client, user)
+	return bot.remindingResponse(c, user)
 }
 
 func (bot *Bot) SkipHandler(c tele.Context) error {
@@ -174,7 +175,7 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 	}
 
 	if user.State != CollectionPreparationSymbol {
-		return remindingResponse(c, bot.client, user)
+		return bot.remindingResponse(c, user)
 	}
 
 	// Skip to mint
@@ -186,7 +187,7 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	return remindingResponse(c, bot.client, user)
+	return bot.remindingResponse(c, user)
 }
 
 func (bot *Bot) MintHandler(c tele.Context) error {
@@ -198,7 +199,7 @@ func (bot *Bot) MintHandler(c tele.Context) error {
 	}
 
 	if user.State != CollectionMint {
-		return remindingResponse(c, bot.client, user)
+		return bot.remindingResponse(c, user)
 	}
 
 	// Checking created items
@@ -226,4 +227,45 @@ func (bot *Bot) MintHandler(c tele.Context) error {
 	}
 
 	return c.Send(messages["collectionCreated"])
+}
+
+// Repeats current state message to user
+func (bot *Bot) remindingResponse(c tele.Context, user User) error {
+	switch user.State {
+
+	case Freeroam:
+		if bot.client.IsRegistered(c.Sender().ID) {
+			return c.Send(messages["collectionCreation"], menu)
+		} else {
+			return c.Send(messages["awaitingRegistration"])
+		}
+
+	case CollectionPreparation:
+		return c.Send(messages["awaitingFiles"], completeFiles)
+
+	case CollectionPreparationName:
+		return c.Send(messages["awaitingCollectionName"])
+
+	case CollectionPreparationSymbol:
+		return c.Send(messages["awaitingCollectionSymbol"])
+
+	case CollectionMint:
+		url, err := wizard.CreateCollectionLink(wizard.CollectionOptions{
+			Name:    user.Name,
+			Symbol:  &user.Name,
+			FileIDs: user.FileIDs,
+		})
+		if err != nil {
+			log.Println("failed to create collection link:", err)
+			return c.Send(messages["fail"])
+		}
+
+		mint := &tele.ReplyMarkup{}
+		mint.URL("Mint", url)
+		return c.Send(messages["awaitingCollectionMint"], mint)
+
+	default:
+		// ? - figure out proper response
+		return nil
+	}
 }
