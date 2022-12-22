@@ -26,12 +26,11 @@ func New(config config.Config) (*Bot, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer kv.Close()
 
 	pref := tele.Settings{
-		ParseMode: tele.ModeMarkdownV2,
-		Token:     config.Token,
-		Poller:    &tele.LongPoller{Timeout: 10 * time.Second},
+		// ParseMode: tele.ModeMarkdownV2,
+		Token:  config.Token,
+		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 	}
 
 	b, err := tele.NewBot(pref)

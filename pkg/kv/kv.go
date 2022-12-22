@@ -15,7 +15,6 @@ func New(databasePath string) (*KV, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	return &KV{
 		DB: db,

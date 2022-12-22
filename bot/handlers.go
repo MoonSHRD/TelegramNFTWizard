@@ -41,7 +41,11 @@ func (bot *Bot) StartHandler(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	return c.Send(messages["welcome"])
+	if err := c.Send(messages["welcome"]); err != nil {
+		log.Println("failed to respond to user:", err)
+	}
+
+	return bot.remindingResponse(c, user)
 }
 
 func (bot *Bot) CreateCollectionHandler(c tele.Context) error {
