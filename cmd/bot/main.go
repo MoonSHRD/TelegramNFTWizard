@@ -15,7 +15,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := bot.Run(cfg); err != nil {
+	b, err := bot.New(cfg)
+	if err != nil {
 		log.Fatal(err)
 	}
+
+	b.Start()
 }
