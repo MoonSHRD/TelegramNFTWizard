@@ -29,11 +29,7 @@ import (
 )
 
 //http://t.me/NFT_Wizard_bot
-var yesNoKeyboard = tgbotapi.NewReplyKeyboard(
-	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton("Yes"),
-		tgbotapi.NewKeyboardButton("No")),
-)
+
 
 
 
@@ -295,7 +291,11 @@ func main() {
 							// create link to mint NFT
 							createLink(userDatabase[update.Message.From.ID].tgid,uri_short[2],baseURL)
 
-							subscription, err := SubscribeForCreateItem(session_single_nft, ch) // this is subscription to UNINDEXED event. 
+							// make rule for watch
+							var looking_for []string
+							looking_for[0] = uri_short[2]
+
+							subscription, err := SubscribeForCreateItem(session_single_nft, ch, looking_for) // this is subscription to UNINDEXED event. 
 							if err != nil {
 								log.Println(err)
 							}
@@ -435,12 +435,12 @@ func checkError(err error) {
 }
 
 // subscribing for CreateItem events. We use watchers without fast-forwarding past events
-func SubscribeForCreateItem(session *SingletonNFT.SingletonNFTSession, listenChannel chan<- *SingletonNFT.SingletonNFTItemCreated) (event.Subscription, error) {
+func SubscribeForCreateItem(session *SingletonNFT.SingletonNFTSession, listenChannel chan<- *SingletonNFT.SingletonNFTItemCreated, file_id []string) (event.Subscription, error) {
 	subscription, err := session.Contract.WatchItemCreated(&bind.WatchOpts{
 		Start:   nil, //last block
 		Context: nil, // nil = no timeout
 	}, listenChannel,
-//		applierTGID,
+		file_id,
 	)
 	if err != nil {
 		return nil, err
