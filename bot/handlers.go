@@ -162,6 +162,7 @@ func (bot *Bot) OnTextHandler(c tele.Context) error {
 		user.Symbol = c.Text()
 		user.State = CollectionMint
 	default:
+		// In default case we do nothin' and responding with reminder
 	}
 
 	// Save user
@@ -210,7 +211,8 @@ func (bot *Bot) MintHandler(c tele.Context) error {
 	}
 
 	// Checking created items
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Minute*time.Duration(5))
+	timeout := time.Minute * time.Duration(5)
+	ctx, cancel := context.WithTimeout(context.TODO(), timeout)
 	remaining, err := bot.client.FilterCreatedItems(ctx, user.CreatedAt, user.FileIDs...)
 	if err != nil {
 		log.Println("failed checking minted files:", err)
