@@ -295,7 +295,7 @@ func main() {
 							var looking_for []string
 							looking_for[0] = uri_short[2]
 
-							subscription, err := SubscribeForCreateItem(session_single_nft, ch, looking_for) // this is subscription to UNINDEXED event. 
+							subscription, err := SubscribeForCreateItem(session_single_nft, ch, looking_for) // this is subscription to INDEXED event. 
 							if err != nil {
 								log.Println(err)
 							}
