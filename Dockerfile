@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS build_base
+FROM golang:1.19-alpine AS build_base
 
 RUN apk add --no-cache alpine-sdk
 
@@ -11,7 +11,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /out/bot cmd/bot
+RUN go build -buildvcs=false -o /out/bot ./cmd/bot
 
 FROM alpine:latest 
 
