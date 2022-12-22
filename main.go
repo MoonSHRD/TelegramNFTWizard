@@ -104,7 +104,7 @@ func main() {
 
 	// Connecting to blockchain network
 	//  client, err := ethclient.Dial(os.Getenv("GATEWAY"))	// for global env config
-	client, err := ethclient.Dial(myenv["GATEWAY_GOERLI_WS"]) // load from local .env file
+	client, err := ethclient.Dial(myenv["GATEWAY_POLYGON_WS"]) // load from local .env file
 	if err != nil {
 		log.Fatalf("could not connect to Ethereum gateway: %v\n", err)
 	}
@@ -117,7 +117,7 @@ func main() {
 	}
 
 	// Creating an auth transactor
-	auth, _ := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(5))
+	auth, _ := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(137))
 
 	// check calls
 	// check balance
@@ -292,10 +292,10 @@ func main() {
 							createLink(userDatabase[update.Message.From.ID].tgid,uri_short[2],baseURL)
 
 							// make rule for watch
-							var looking_for []string
-							looking_for[0] = uri_short[2]
+							rule := make([]string,0)
+							rule = append(rule, uri_short[2])
 
-							subscription, err := SubscribeForCreateItem(session_single_nft, ch, looking_for) // this is subscription to INDEXED event. 
+							subscription, err := SubscribeForCreateItem(session_single_nft, ch, rule) // this is subscription to INDEXED event. 
 							if err != nil {
 								log.Println(err)
 							}
@@ -466,6 +466,10 @@ func AsyncCreateItemListener(ctx context.Context,subscription event.Subscription
 									msg := tgbotapi.NewMessage(userDatabase[tgid].tgid, " your NFT token has been created, token ID is: " + eventResult.TokenId.String())
 									bot.Send(msg)
 									msg = tgbotapi.NewMessage(tgid,"address of NFT collection (add it to metamask): " + eventResult.Raw.Address.Hex())
+									bot.Send(msg)
+									look_link := "https://telegram-nft-wizard.vercel.app/looknft?token_id="
+									t_id := eventResult.TokenId.String()
+									msg = tgbotapi.NewMessage(tgid,look_link + t_id)
 									bot.Send(msg)
 									subscription.Unsubscribe()
 									break EventLoop
