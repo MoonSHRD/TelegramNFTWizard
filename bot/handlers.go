@@ -119,13 +119,6 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 		log.Println("failed to respond to user:", err)
 	}
 
-	defer func() {
-		// Save user
-		if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
-			log.Println("failed to put user in kv:", err)
-		}
-	}()
-
 	// If limit reached force user to next step
 	if len(user.FileIDs) >= 10 {
 		if err := c.Send(messages["filesLimitReached"]); err != nil {
@@ -135,7 +128,17 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 
 		user.State = CollectionPreparationName
 
+		// Save user
+		if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
+			log.Println("failed to put user in kv:", err)
+		}
+
 		return bot.remindingResponse(c, user)
+	}
+
+	// Save user
+	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
+		log.Println("failed to put user in kv:", err)
 	}
 
 	return nil
