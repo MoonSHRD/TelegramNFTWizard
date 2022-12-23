@@ -8,14 +8,12 @@ import (
 	"time"
 
 	passport "github.com/MoonSHRD/IKY-telegram-bot/artifacts/TGPassport"
-	"golang.org/x/exp/slices"
 
 	SingletonNFT "github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/SingletonNFT"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/event"
 )
 
 type Client struct {
@@ -29,6 +27,7 @@ type Config struct {
 	AccountAddress   string `env:"ACCOUNT_ADDRESS,notEmpty"`
 	PassportAddress  string `env:"PASSPORT_ADDRESS,notEmpty"`
 	SingletonAddress string `env:"SINGLETON_ADDRESS,notEmpty"`
+	FactoryAddress   string `env:"FACTORY_ADDRESS,notEmpty"`
 }
 
 func NewClient(config Config) (*Client, error) {
@@ -46,7 +45,7 @@ func NewClient(config Config) (*Client, error) {
 	}
 
 	// Creating an auth transactor
-	auth, _ := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(5))
+	auth, _ := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(137))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(3))
 	accountAddress := common.HexToAddress(config.AccountAddress)
@@ -110,14 +109,15 @@ func NewClient(config Config) (*Client, error) {
 	}, nil
 }
 
-func (client Client) IsRegistered(user_id int64) bool {
-	//GetPassportWalletByID
+func (client *Client) IsRegistered(user_id int64) bool {
 	passport_address, err := client.Passport.GetPassportWalletByID(user_id)
 	if err != nil {
 		return false
 	}
+
 	log.Println("check that user with this id:", user_id)
 	log.Println("have associated wallet address:", passport_address)
+
 	if passport_address == common.HexToAddress("0x0000000000000000000000000000000000000000") {
 		log.Println("passport is null, user is not registred")
 		return false
@@ -126,81 +126,29 @@ func (client Client) IsRegistered(user_id int64) bool {
 	}
 }
 
-// SubscribeToCreateItemEvent creates channel which emits one create item event and closes it. In case of error release channel closes
-func (client Client) SubscribeToCreateItemEvent(ctx context.Context, fileID string) (chan *SingletonNFT.SingletonNFTItemCreated, error) {
-	var ch = make(chan *SingletonNFT.SingletonNFTItemCreated)
-	var release = make(chan *SingletonNFT.SingletonNFTItemCreated)
-
-	sub, err := client.Signleton.Contract.WatchItemCreated(&bind.WatchOpts{
-		Start:   nil, //last block
-		Context: ctx, // nil = no timeout
-	}, ch)
+func (client *Client) CheckItemCreated(ctx context.Context, fileID string, start time.Time) (bool, error) {
+	iter, err := client.Signleton.Contract.FilterItemCreated(&bind.FilterOpts{
+		Start: uint64(start.Unix()),
+	}, []string{fileID})
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
-	// Basically filtering events until meeting exact file id
-	go releaseOnFileID(ch, sub, fileID, release)
-
-	return release, nil
+	return iter.Next(), iter.Error()
 }
 
-// Watches CreateItem event and releases it, after closes channel. In case of error release channel closes
-func releaseOnFileID(sink <-chan *SingletonNFT.SingletonNFTItemCreated, sub event.Subscription, file_id string, release chan<- *SingletonNFT.SingletonNFTItemCreated) {
-	defer sub.Unsubscribe()
-	defer close(release)
-	for {
-		select {
-		case event, ok := <-sink:
-			{
-				// Checking is channel is closed
-				if !ok {
-					log.Println("sink is closed")
-					return
-				}
-
-				// Filtering event with specific file_id
-				if event.FileId != file_id {
-					continue
-				}
-
-				// Recover on release channel closed
-				defer func() {
-					if r := recover(); r != nil {
-						log.Println("failed to release create item event", r)
-					}
-				}()
-
-				// Release event
-				release <- event
-				return
-			}
-		case err := <-sub.Err():
-			{
-				log.Println("subscription error:", err)
-				return
-			}
-		}
-	}
-}
-
-func (client Client) FilterCreatedItems(ctx context.Context, from time.Time, fileIDs ...string) ([]string, error) {
-	events, err := client.Signleton.Contract.FilterItemCreated(&bind.FilterOpts{
-		Start:   uint64(from.Unix()),
-		Context: ctx,
-	})
+// Returns count of remaining items, if remaining == 0 all files was created.
+func (client *Client) CheckItemsCreated(ctx context.Context, fileIDs []string, start time.Time) (int, error) {
+	iter, err := client.Signleton.Contract.FilterItemCreated(&bind.FilterOpts{
+		Start: uint64(start.Unix()),
+	}, fileIDs)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	ids := slices.Clone(fileIDs)
-	slices.Sort(ids)
-	for events.Next() {
-		index, found := slices.BinarySearch(ids, events.Event.FileId)
-		if found {
-			slices.Delete(ids, index, index+1)
-		}
+	count := len(fileIDs)
+	for iter.Next() {
+		count -= 1
 	}
-
-	return ids, nil
+	return count, iter.Error()
 }
