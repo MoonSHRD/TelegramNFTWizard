@@ -11,7 +11,7 @@ var BaseURL = "https://telegram-nft-wizard.vercel.app/"
 var SingleItemPath = "/createnft"
 var CollectionPath = "/createcollection"
 
-func SingleItemLink(fileID string) (string, error) {
+func CreateSingleItemLink(fileID string) (string, error) {
 	if err := v.Validate.Var(fileID, "required"); err != nil {
 		return "", err
 	}

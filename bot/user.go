@@ -21,9 +21,26 @@ const (
 
 // User is state on edge for bot to keep track of interaction pipeline
 type User struct {
-	CreatedAt time.Time `json:"created_at"`
+	// StartedAt time used to track user pipeline start
+	// Resets after minting
+	StartedAt time.Time `json:"started_at"`
 	State     State     `json:"state"`
-	Name      string    `json:"name"`
-	Symbol    string    `json:"symbol"`
-	FileIDs   []string  `json:"file_ids"`
+	// NFT item name
+	Name string `json:"name"`
+	// NFT symbol (currently unused i guess)
+	Symbol string `json:"symbol"`
+	// Is it single file NFT
+	IsSingleFile bool `json:"is_single_file"`
+	// Telegram File ID's, goes to wizard as is
+	FileIDs []string `json:"file_ids"`
+	// Stores time when bot instance was created, it needed to restore subscription if bot fails
+	SubscriptionInstance int64 `json:"subscription_instance"`
+}
+
+// UserDefaults sets StartedAt and Freeroam state
+func UserDefaults() User {
+	return User{
+		StartedAt: time.Now(),
+		State:     Freeroam,
+	}
 }

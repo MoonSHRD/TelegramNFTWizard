@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"path/filepath"
-	"time"
 
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/binary"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/wizard"
@@ -30,10 +29,7 @@ func (bot *Bot) StartHandler(c tele.Context) error {
 	}
 
 	// New user
-	user := User{
-		CreatedAt: time.Now(),
-		State:     Freeroam,
-	}
+	user := UserDefaults()
 
 	// Save new user
 	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
@@ -46,6 +42,32 @@ func (bot *Bot) StartHandler(c tele.Context) error {
 	}
 
 	return bot.remindingResponse(c, user)
+}
+
+func (bot *Bot) CreateItemHandler(c tele.Context) error {
+	// Retrieve user
+	var user User
+	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
+		log.Println("failed to get user from kv:", err)
+		return c.Send(messages["fail"])
+	}
+
+	if user.State != Freeroam {
+		return bot.remindingResponse(c, user)
+	}
+
+	// Update state
+	user.State = CollectionPreparation
+	user.IsSingleFile = true
+
+	// Save user
+	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
+		log.Println("failed to put user in kv:", err)
+		return c.Send(messages["fail"])
+	}
+
+	// Display keyboard
+	return c.Send(messages["awaitingFiles"], completeFiles)
 }
 
 func (bot *Bot) CreateCollectionHandler(c tele.Context) error {
@@ -121,12 +143,18 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 
 	// If limit reached force user to next step
 	if len(user.FileIDs) >= 10 {
-		if err := c.Send(messages["filesLimitReached"]); err != nil {
-			log.Println("failed to respond to user:", err)
-			return c.Send(messages["fail"])
+		user.State = CollectionPreparationName
+
+		// Save user
+		if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
+			log.Println("failed to put user in kv:", err)
 		}
 
-		user.State = CollectionPreparationName
+		return bot.remindingResponse(c, user)
+	}
+
+	if user.IsSingleFile {
+		user.State = CollectionMint
 
 		// Save user
 		if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
@@ -188,6 +216,7 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 
 	// Skip to mint
 	user.State = CollectionMint
+	user.SubscriptionInstance = bot.createdAt
 
 	// Save user
 	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
@@ -198,7 +227,7 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 	return bot.remindingResponse(c, user)
 }
 
-func (bot *Bot) MintHandler(c tele.Context) error {
+func (bot *Bot) MintCheckHandler(c tele.Context) error {
 	// Retrieve user
 	var user User
 	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
@@ -211,28 +240,32 @@ func (bot *Bot) MintHandler(c tele.Context) error {
 	}
 
 	// Checking created items
-	timeout := time.Minute * time.Duration(5)
-	ctx, cancel := context.WithTimeout(context.TODO(), timeout)
-	remaining, err := bot.client.FilterCreatedItems(ctx, user.CreatedAt, user.FileIDs...)
+	ctx := context.Background()
+	remaining, err := bot.client.CheckItemsCreated(ctx, user.FileIDs, user.StartedAt)
 	if err != nil {
 		log.Println("failed checking minted files:", err)
 	}
-	cancel()
 
 	log.Printf(
 		"Checked created items for %s (%d), remaining %+v out of %+v\n",
 		c.Sender().Username,
 		c.Sender().ID,
 		remaining,
-		user.FileIDs,
+		len(user.FileIDs),
 	)
 
-	if len(remaining) == len(user.FileIDs) {
+	if remaining == len(user.FileIDs) {
 		return c.Send(messages["checkMint"])
 	}
 
-	if len(remaining) != 0 {
+	if remaining != 0 {
 		return c.Send(messages["filesInProcess"])
+	}
+
+	// Reset user
+	if err := bot.kv.PutJson(binary.From(c.Sender().ID), UserDefaults()); err != nil {
+		log.Println("failed to put user in kv:", err)
+		return c.Send(messages["fail"])
 	}
 
 	return c.Send(messages["collectionCreated"])
@@ -259,14 +292,23 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		return c.Send(messages["awaitingCollectionSymbol"])
 
 	case CollectionMint:
-		url, err := wizard.CreateCollectionLink(wizard.CollectionOptions{
-			Name:    user.Name,
-			Symbol:  &user.Name,
-			FileIDs: user.FileIDs,
-		})
-		if err != nil {
-			log.Println("failed to create collection link:", err)
-			return c.Send(messages["fail"])
+		var url string
+		var err error
+
+		if user.IsSingleFile {
+			if url, err = wizard.CreateSingleItemLink(user.FileIDs[0]); err != nil {
+				log.Println("failed to single item link:", err)
+				return c.Send(messages["fail"])
+			}
+		} else {
+			if url, err = wizard.CreateCollectionLink(wizard.CollectionOptions{
+				Name:    user.Name,
+				Symbol:  &user.Name,
+				FileIDs: user.FileIDs,
+			}); err != nil {
+				log.Println("failed to create collection link:", err)
+				return c.Send(messages["fail"])
+			}
 		}
 
 		mint := &tele.ReplyMarkup{}

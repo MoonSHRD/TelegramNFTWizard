@@ -12,8 +12,10 @@ import (
 
 type Bot struct {
 	*tele.Bot
-	kv     *kv.KV
-	client *blockchain.Client
+	kv            *kv.KV
+	client        *blockchain.Client
+	createdAt     int64
+	subscriptions map[string]*blockchain.Subscription
 }
 
 func New(config config.Config) (*Bot, error) {
@@ -39,21 +41,28 @@ func New(config config.Config) (*Bot, error) {
 	}
 
 	return &Bot{
-		Bot:    b,
-		kv:     kv,
-		client: client,
+		Bot:           b,
+		kv:            kv,
+		client:        client,
+		createdAt:     time.Now().Unix(),
+		subscriptions: make(map[string]*blockchain.Subscription),
 	}, nil
 }
 
 func (bot *Bot) Start() {
+	// All handles are asynchronous, keep it in mind
 
+	// Just prints whole message update struct to log, suitable for debug
 	bot.Use(middleware.Logger())
 
 	// User first contact with bot
 	bot.Handle("/start", bot.StartHandler)
 
+	// When user taping "Create item"
+	bot.Handle(&btnCreateItem, bot.CreateItemHandler)
+
 	// When user taping "Create collection"
-	bot.Handle(&btnCreate, bot.CreateCollectionHandler)
+	bot.Handle(&btnCreateCollection, bot.CreateCollectionHandler)
 
 	// When user is sending NFTs for collection
 	bot.Handle(tele.OnDocument, bot.OnDocumentHandler)
@@ -65,7 +74,7 @@ func (bot *Bot) Start() {
 	bot.Handle(&btnSkip, bot.SkipHandler)
 
 	// Final step
-	bot.Handle(&btnMinted, bot.MintHandler)
+	bot.Handle(&btnMinted, bot.MintCheckHandler)
 
 	bot.Bot.Start()
 }
