@@ -3,8 +3,8 @@ module github.com/MoonSHRD/TelegramNFTWizard
 go 1.19
 
 require (
-	github.com/MoonSHRD/IKY-telegram-bot v0.2.1
-	github.com/MoonSHRD/TelegramNFT-Wizard-Contracts v0.3.0
+	github.com/MoonSHRD/IKY-telegram-bot v1.0.1
+	github.com/MoonSHRD/TelegramNFT-Wizard-Contracts v0.4.0
 	github.com/StarkBotsIndustries/telegraph/v2 v2.0.0
 	github.com/akrylysov/pogreb v0.10.1
 	github.com/caarlos0/env/v6 v6.10.1
