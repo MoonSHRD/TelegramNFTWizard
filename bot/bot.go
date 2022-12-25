@@ -67,6 +67,9 @@ func (bot *Bot) Start() {
 	// When user is sending NFTs for collection
 	bot.Handle(tele.OnDocument, bot.OnDocumentHandler)
 
+	// When user taping "That's all files"
+	bot.Handle(&btnCompleteFiles, bot.OnCompleteFilesHandler)
+
 	// There should fall all text input steps
 	bot.Handle(tele.OnText, bot.OnTextHandler)
 

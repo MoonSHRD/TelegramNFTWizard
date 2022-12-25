@@ -10,6 +10,8 @@ var messages = map[string]string{
 	// Uploading files step
 	"awaitingFiles":     "Send me a files which u want to transform into NFT. \nYou can upload up to 10 files per collection",
 	"filesLimitReached": "Reached limit of files for collection",
+	"filesEmpty":        "No files was uploaded",
+	"fileSizeLimit":     "Collection cannot hold files bigger than 5MB, try compress or resize it",
 	"notAnImage":        "Not an image, supported extensions - 'png', 'jpg', 'webp'",
 
 	// Text inputs step

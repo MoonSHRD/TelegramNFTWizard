@@ -3,12 +3,10 @@ package bot
 import (
 	"context"
 	"log"
-	"path/filepath"
 
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/binary"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/wizard"
 	"github.com/StarkBotsIndustries/telegraph/v2"
-	"golang.org/x/exp/slices"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -115,9 +113,8 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 
 	doc := c.Message().Document
 
-	// Document is image
-	if !slices.Contains([]string{"png", "jpg", "webp"}, filepath.Ext(doc.FileName)) {
-		return c.Send(messages["notAnImage"])
+	if doc.FileSize >= 5e+6 {
+		return c.Send(messages["fileSizeLimit"])
 	}
 
 	// Fetch image
@@ -170,6 +167,33 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 	}
 
 	return nil
+}
+
+func (bot *Bot) OnCompleteFilesHandler(c tele.Context) error {
+	// Retrieve user
+	var user User
+	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
+		log.Println("failed to get user from kv:", err)
+		return c.Send(messages["fail"])
+	}
+
+	if user.State != CollectionPreparation {
+		return bot.remindingResponse(c, user)
+	}
+
+	if len(user.FileIDs) == 0 {
+		return c.Send(messages["filesEmpty"])
+	}
+
+	// Updating step
+	user.State = CollectionPreparationName
+
+	// Save user
+	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
+		log.Println("failed to put user in kv:", err)
+	}
+
+	return bot.remindingResponse(c, user)
 }
 
 func (bot *Bot) OnTextHandler(c tele.Context) error {
@@ -283,13 +307,17 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		}
 
 	case CollectionPreparation:
-		return c.Send(messages["awaitingFiles"], completeFiles)
+		if user.IsSingleFile {
+			return c.Send(messages["awaitingFiles"])
+		} else {
+			return c.Send(messages["awaitingFiles"], completeFiles)
+		}
 
 	case CollectionPreparationName:
 		return c.Send(messages["awaitingCollectionName"])
 
 	case CollectionPreparationSymbol:
-		return c.Send(messages["awaitingCollectionSymbol"])
+		return c.Send(messages["awaitingCollectionSymbol"], skip)
 
 	case CollectionMint:
 		var url string
@@ -312,7 +340,10 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		}
 
 		mint := &tele.ReplyMarkup{}
-		mint.URL("Mint", url)
+		mint.Inline(
+			mint.Row(mint.URL("Mint", url)),
+			mint.Row(btnMinted),
+		)
 		return c.Send(messages["awaitingCollectionMint"], mint)
 
 	default:
