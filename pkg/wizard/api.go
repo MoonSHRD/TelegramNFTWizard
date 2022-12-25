@@ -24,7 +24,7 @@ func CreateSingleItemLink(fileID string) (string, error) {
 	u = u.JoinPath(SingleItemPath)
 
 	// Build up URL Query
-	var query url.Values
+	query := make(url.Values)
 	query.Set("file_id", fileID)
 	u.RawQuery = query.Encode()
 
@@ -51,8 +51,7 @@ func CreateCollectionLink(options CollectionOptions) (string, error) {
 	u = u.JoinPath(CollectionPath)
 
 	// Build up URL Query
-	var query url.Values
-
+	query := make(url.Values)
 	query.Set("name", options.Name)
 
 	if options.Symbol != nil {

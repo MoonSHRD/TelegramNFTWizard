@@ -36,7 +36,6 @@ func NewClient(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not connect to Ethereum gateway: %v\n", err)
 	}
-	defer client.Close()
 
 	// setting up private key in proper format
 	privateKey, err := crypto.HexToECDSA(config.PrivateKey)
@@ -112,6 +111,7 @@ func NewClient(config Config) (*Client, error) {
 func (client *Client) IsRegistered(user_id int64) bool {
 	passport_address, err := client.Passport.GetPassportWalletByID(user_id)
 	if err != nil {
+		log.Println(err)
 		return false
 	}
 
@@ -139,14 +139,14 @@ func (client *Client) CheckItemCreated(ctx context.Context, fileID string, start
 
 // Returns count of remaining items, if remaining == 0 all files was created.
 func (client *Client) CheckItemsCreated(ctx context.Context, fileIDs []string, start time.Time) (int, error) {
+	count := len(fileIDs)
 	iter, err := client.Signleton.Contract.FilterItemCreated(&bind.FilterOpts{
 		Start: uint64(start.Unix()),
 	}, fileIDs)
 	if err != nil {
-		return 0, err
+		return count, err
 	}
 
-	count := len(fileIDs)
 	for iter.Next() {
 		count -= 1
 	}
