@@ -3,6 +3,8 @@ package bot
 import (
 	"context"
 	"log"
+	"net/url"
+	"path/filepath"
 
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/binary"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/wizard"
@@ -132,7 +134,13 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	user.FileIDs = append(user.FileIDs, doc.FileID)
+	u, err := url.Parse(telegraphLink)
+	if err != nil {
+		log.Println("failed to parse telegraph link:", err)
+		return c.Send(messages["fail"])
+	}
+
+	user.FileIDs = append(user.FileIDs, filepath.Base(u.Path))
 
 	if err := c.Send("Saved file at "+telegraphLink, completeFiles); err != nil {
 		log.Println("failed to respond to user:", err)
@@ -331,7 +339,6 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		} else {
 			if url, err = wizard.CreateCollectionLink(wizard.CollectionOptions{
 				Name:    user.Name,
-				Symbol:  &user.Name,
 				FileIDs: user.FileIDs,
 			}); err != nil {
 				log.Println("failed to create collection link:", err)

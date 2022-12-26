@@ -31,7 +31,7 @@ type User struct {
 	Symbol string `json:"symbol"`
 	// Is it single file NFT
 	IsSingleFile bool `json:"is_single_file"`
-	// Telegram File ID's, goes to wizard as is
+	// Telegraph File ID's, goes to wizard as is
 	FileIDs []string `json:"file_ids"`
 	// Stores time when bot instance was created, it needed to restore subscription if bot fails
 	SubscriptionInstance int64 `json:"subscription_instance"`
