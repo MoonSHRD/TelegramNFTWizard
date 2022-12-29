@@ -57,7 +57,6 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
-github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/MoonSHRD/IKY-telegram-bot v1.0.1 h1:Us65jTTdMjyF1XU8D7oVWRKZ0AV5rdsk0f1jBsoQKn4=
 github.com/MoonSHRD/IKY-telegram-bot v1.0.1/go.mod h1:oR7+q9qz0IivIxTHN58xQRIA+dg+1dLXwrNH8rnnTFc=
 github.com/MoonSHRD/TelegramNFT-Wizard-Contracts v0.4.0 h1:QxzNbOCyq4MzpU5RGnZNbIV5LS8QOYMpWMd/VzehvyA=

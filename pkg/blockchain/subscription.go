@@ -5,14 +5,16 @@ import (
 	"errors"
 	"log"
 
+	"github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/FactoryNFT"
 	SingletonNFT "github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/SingletonNFT"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/event"
 )
 
 type Subscription struct {
 	events    event.Subscription
-	sink      <-chan *SingletonNFT.SingletonNFTItemCreated
+	sink      <-chan struct{}
 	release   chan struct{}
 	err       chan error
 	remaining int
@@ -33,6 +35,12 @@ func (sub *Subscription) Err() <-chan error {
 	return sub.err
 }
 
+func (sub *Subscription) Close() {
+	close(sub.release)
+	close(sub.err)
+	sub.events.Unsubscribe()
+}
+
 // SubscribeToItems creates subscription to CreateItem event, on Released() returns signal channel which returns one signal on finish.
 // In case of error subscription fails and error goes into Err().
 // If `start` is nil Watch is started from last block, it's better to use user create time.
@@ -50,23 +58,65 @@ func (client *Client) SubscribeToItems(ctx context.Context, fileIDs []string, st
 		return nil, err
 	}
 
+	var evSink = make(chan struct{})
+
+	// Simple pass through signal channel
+	go func() {
+		for range sink {
+			evSink <- struct{}{}
+		}
+	}()
+
 	sub := &Subscription{
 		remaining: len(fileIDs),
 		events:    subscription,
-		sink:      sink,
+		sink:      evSink,
 		release:   make(chan struct{}),
 		err:       make(chan error, 1),
 	}
 
-	go client.waitForFiles(sub)
+	go client.waitForEvents(sub)
 
 	return sub, nil
 }
 
-func (client *Client) waitForFiles(subscription *Subscription) {
-	defer subscription.events.Unsubscribe()
-	defer close(subscription.err)
-	defer close(subscription.release)
+// SubscribeToCreator creates subscription to CollectionCreated event, on Released() returns signal channel which returns one signal on finish.
+// In case of error subscription fails and error goes into Err().
+// If `start` is nil Watch is started from last block, it's better to use user create time.
+func (client *Client) SubscribeToCreator(ctx context.Context, creator common.Address, start *uint64) (*Subscription, error) {
+	var sink = make(chan *FactoryNFT.FactoryNFTCollectionCreated)
+	subscription, err := client.Factory.Contract.WatchCollectionCreated(&bind.WatchOpts{
+		Start:   start, // nil = last block
+		Context: ctx,   // nil = no timeout
+	}, sink, []common.Address{creator})
+	if err != nil {
+		return nil, err
+	}
+
+	var evSink = make(chan struct{})
+
+	// Simple pass through signal channel
+	go func() {
+		for range sink {
+			evSink <- struct{}{}
+		}
+	}()
+
+	sub := &Subscription{
+		remaining: 1,
+		events:    subscription,
+		sink:      evSink,
+		release:   make(chan struct{}),
+		err:       make(chan error, 1),
+	}
+
+	go client.waitForEvents(sub)
+
+	return sub, nil
+}
+
+func (client *Client) waitForEvents(subscription *Subscription) {
+	defer subscription.Close()
 	for {
 		select {
 		case <-subscription.sink:

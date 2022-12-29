@@ -9,6 +9,7 @@ import (
 
 	passport "github.com/MoonSHRD/IKY-telegram-bot/artifacts/TGPassport"
 
+	"github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/FactoryNFT"
 	SingletonNFT "github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/SingletonNFT"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -19,6 +20,7 @@ import (
 type Client struct {
 	Passport  *passport.PassportSession
 	Signleton *SingletonNFT.SingletonNFTSession
+	Factory   *FactoryNFT.FactoryNFTSession
 }
 
 type Config struct {
@@ -67,6 +69,11 @@ func NewClient(config Config) (*Client, error) {
 		return nil, fmt.Errorf("Failed to instantiate a SingletonNFT contract: %v", err)
 	}
 
+	factoryCollection, err := FactoryNFT.NewFactoryNFT(common.HexToAddress(config.FactoryAddress), client)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to instantiate a SingletonNFT contract: %v", err)
+	}
+
 	// Wrap the Passport contract instance into a session
 	passport := &passport.PassportSession{
 		Contract: passportCenter,
@@ -102,9 +109,28 @@ func NewClient(config Config) (*Client, error) {
 		},
 	}
 
+	//Wrap FactoryNFT contract instance into a session
+	factory := &FactoryNFT.FactoryNFTSession{
+		Contract: factoryCollection,
+		CallOpts: bind.CallOpts{
+			Pending: true,
+			From:    auth.From,
+			Context: context.Background(),
+		},
+		TransactOpts: bind.TransactOpts{
+			From:      auth.From,
+			Signer:    auth.Signer,
+			GasLimit:  0,
+			GasFeeCap: nil,
+			GasTipCap: nil,
+			Context:   context.Background(),
+		},
+	}
+
 	return &Client{
 		Passport:  passport,
 		Signleton: singleton,
+		Factory:   factory,
 	}, nil
 }
 

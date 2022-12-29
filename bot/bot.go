@@ -15,7 +15,7 @@ type Bot struct {
 	kv            *kv.KV
 	client        *blockchain.Client
 	createdAt     int64
-	subscriptions map[string]*blockchain.Subscription
+	subscriptions map[int64]*blockchain.Subscription
 }
 
 func New(config config.Config) (*Bot, error) {
@@ -45,7 +45,7 @@ func New(config config.Config) (*Bot, error) {
 		kv:            kv,
 		client:        client,
 		createdAt:     time.Now().Unix(),
-		subscriptions: make(map[string]*blockchain.Subscription),
+		subscriptions: make(map[int64]*blockchain.Subscription),
 	}, nil
 }
 
@@ -75,9 +75,6 @@ func (bot *Bot) Start() {
 
 	// Skip button handler (currently only for skipping symbol input)
 	bot.Handle(&btnSkip, bot.SkipHandler)
-
-	// Final step
-	bot.Handle(&btnMinted, bot.MintCheckHandler)
 
 	bot.Bot.Start()
 }

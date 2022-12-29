@@ -13,9 +13,6 @@ var (
 
 	skip    = &tele.ReplyMarkup{}
 	btnSkip = skip.Data("Skip", "skip")
-
-	minted    = &tele.ReplyMarkup{}
-	btnMinted = skip.Data("Check mint status", "check_status")
 )
 
 // Keyboards init
@@ -31,9 +28,5 @@ func init() {
 
 	skip.Inline(
 		skip.Row(btnSkip),
-	)
-
-	minted.Inline(
-		minted.Row(btnMinted),
 	)
 }

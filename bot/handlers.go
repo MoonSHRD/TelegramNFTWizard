@@ -1,7 +1,6 @@
 package bot
 
 import (
-	"context"
 	"log"
 	"net/url"
 	"path/filepath"
@@ -221,6 +220,7 @@ func (bot *Bot) OnTextHandler(c tele.Context) error {
 		// TODO: necessary checks on symbol validity
 		user.Symbol = c.Text()
 		user.State = CollectionMint
+		user.SubscriptionInstance = bot.createdAt
 	default:
 		// In default case we do nothin' and responding with reminder
 	}
@@ -259,50 +259,6 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 	return bot.remindingResponse(c, user)
 }
 
-func (bot *Bot) MintCheckHandler(c tele.Context) error {
-	// Retrieve user
-	var user User
-	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
-		log.Println("failed to get user from kv:", err)
-		return c.Send(messages["fail"])
-	}
-
-	if user.State != CollectionMint {
-		return bot.remindingResponse(c, user)
-	}
-
-	// Checking created items
-	ctx := context.Background()
-	remaining, err := bot.client.CheckItemsCreated(ctx, user.FileIDs, user.StartedAt)
-	if err != nil {
-		log.Println("failed checking minted files:", err)
-	}
-
-	log.Printf(
-		"Checked created items for %s (%d), remaining %+v out of %+v\n",
-		c.Sender().Username,
-		c.Sender().ID,
-		remaining,
-		len(user.FileIDs),
-	)
-
-	if remaining == len(user.FileIDs) {
-		return c.Send(messages["checkMint"])
-	}
-
-	if remaining != 0 {
-		return c.Send(messages["filesInProcess"])
-	}
-
-	// Reset user
-	if err := bot.kv.PutJson(binary.From(c.Sender().ID), UserDefaults()); err != nil {
-		log.Println("failed to put user in kv:", err)
-		return c.Send(messages["fail"])
-	}
-
-	return c.Send(messages["collectionCreated"])
-}
-
 // Repeats current state message to user
 func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 	switch user.State {
@@ -331,6 +287,12 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		var url string
 		var err error
 
+		err = bot.subscribe(c.Sender(), user)
+		if err != nil {
+			log.Println("failed to sub:", err)
+			return c.Send(messages["fail"])
+		}
+
 		if user.IsSingleFile {
 			if url, err = wizard.CreateSingleItemLink(user.FileIDs[0]); err != nil {
 				log.Println("failed to single item link:", err)
@@ -349,7 +311,6 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		mint := &tele.ReplyMarkup{}
 		mint.Inline(
 			mint.Row(mint.URL("Mint", url)),
-			mint.Row(btnMinted),
 		)
 		return c.Send(messages["awaitingCollectionMint"], mint)
 
