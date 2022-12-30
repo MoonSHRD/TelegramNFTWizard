@@ -71,12 +71,6 @@ func (bot *Bot) subscribe(r *tele.User, user User) error {
 				log.Println("failed to send fail message:", err)
 			}
 		}
-
-		// reminding message
-		_, err = bot.Send(r, messages["collectionCreation"], menu)
-		if err != nil {
-			log.Println("failed to send collection creation message:", err)
-		}
 	}(r)
 
 	return nil
