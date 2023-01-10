@@ -9,3 +9,7 @@ services:
     restart: always
     volumes:
       - ".env:/app/.env"
+      - "data:/app/data"
+
+volumes:
+  data:

@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS build_base
+FROM golang:1.19-alpine AS build_base
 
 RUN apk add --no-cache alpine-sdk
 
@@ -6,14 +6,12 @@ RUN apk add --no-cache alpine-sdk
 WORKDIR /app
 
 # We want to populate the module cache based on the go.{mod,sum} files.
-COPY go.mod .
-COPY go.sum .
-
+COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-RUN go build -o /out/bot .
+RUN go build -buildvcs=false -o /out/bot ./cmd/bot
 
 FROM alpine:latest 
 

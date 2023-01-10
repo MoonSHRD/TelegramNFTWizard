@@ -5,7 +5,7 @@
 *.so
 *.dylib
 *.secret
-*.env
+# *.env
 
 # Test binary, built with `go test -c`
 *.test
@@ -15,3 +15,6 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Database
+data/

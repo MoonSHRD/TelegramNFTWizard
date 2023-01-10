@@ -1,0 +1,10 @@
+# Telegram
+TOKEN=""
+# Database
+DATABASE_PATH="./data"
+# Blockchain
+PRIVATE_KEY=""
+GATEWAY=""
+ACCOUNT_ADDRESS=""
+PASSPORT_ADDRESS=""
+SINGLETON_ADDRESS=""
