@@ -18,6 +18,8 @@ type Subscription struct {
 	release   chan struct{}
 	err       chan error
 	remaining int
+
+	tokens []string
 }
 
 // Remaining files count
@@ -28,6 +30,10 @@ func (sub *Subscription) Remaining() int {
 // Released channel will emit one unit struct at finish
 func (sub *Subscription) Released() <-chan struct{} {
 	return sub.release
+}
+
+func (sub *Subscription) Tokens() []string {
+	return sub.tokens
 }
 
 // Error if it happened subscription is closed
@@ -60,20 +66,22 @@ func (client *Client) SubscribeToItems(ctx context.Context, fileIDs []string, st
 
 	var evSink = make(chan struct{})
 
-	// Simple pass through signal channel
-	go func() {
-		for range sink {
-			evSink <- struct{}{}
-		}
-	}()
-
 	sub := &Subscription{
 		remaining: len(fileIDs),
 		events:    subscription,
 		sink:      evSink,
 		release:   make(chan struct{}),
 		err:       make(chan error, 1),
+		tokens:    []string{},
 	}
+
+	// Simple pass through signal channel
+	go func() {
+		for ev := range sink {
+			sub.tokens = append(sub.tokens, ev.TokenId.String())
+			evSink <- struct{}{}
+		}
+	}()
 
 	go client.waitForEvents(sub)
 
@@ -95,13 +103,6 @@ func (client *Client) SubscribeToCreator(ctx context.Context, creator common.Add
 
 	var evSink = make(chan struct{})
 
-	// Simple pass through signal channel
-	go func() {
-		for range sink {
-			evSink <- struct{}{}
-		}
-	}()
-
 	sub := &Subscription{
 		remaining: 1,
 		events:    subscription,
@@ -109,6 +110,14 @@ func (client *Client) SubscribeToCreator(ctx context.Context, creator common.Add
 		release:   make(chan struct{}),
 		err:       make(chan error, 1),
 	}
+
+	// Simple pass through signal channel
+	go func() {
+		for ev := range sink {
+			sub.tokens = append(sub.tokens, ev.Collection.String())
+			evSink <- struct{}{}
+		}
+	}()
 
 	go client.waitForEvents(sub)
 

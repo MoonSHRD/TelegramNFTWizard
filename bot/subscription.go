@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"log"
+	"strings"
 
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/binary"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/blockchain"
@@ -55,7 +56,7 @@ func (bot *Bot) subscribe(r *tele.User, user User) error {
 		}
 
 		// Success
-		_, err := bot.Send(r, messages["collectionCreated"])
+		_, err := bot.Send(r, messages["collectionCreated"]+"\ntokenID: "+strings.Join(sub.Tokens(), "\n"))
 		if err != nil {
 			log.Println("failed to send collection created message:", err)
 		}

@@ -5,10 +5,10 @@ var messages = map[string]string{
 	// Welcome step
 	"welcome":              "Hey, this bot is allowing you to create NFT",
 	"awaitingRegistration": "You are not registred yet, first attach your wallet to your tg account via this bot https://t.me/E_Passport_bot",
-	"collectionCreation":   `You in one step before your own NFT collection, just tap "Create collection" on keyboard`,
+	"collectionCreation":   `You in one step before your own NFT, just tap "Create NFT item" on keyboard`,
 
 	// Uploading files step
-	"awaitingFiles":     "Send me a files which u want to transform into NFT. \nYou can upload up to 10 files per collection",
+	"awaitingFiles":     "Send me a file which will be your NFT.",
 	"filesLimitReached": "Reached limit of files for collection",
 	"filesEmpty":        "No files was uploaded",
 	"fileSizeLimit":     "Collection cannot hold files bigger than 5MB, try compress or resize it",
@@ -21,9 +21,9 @@ var messages = map[string]string{
 	// Mint step
 	"awaitingCollectionMint": "Last step, mint!",
 	"checkMint":              "None of files are minted at the moment, wait for confirmations or check your transactions",
-	"filesInProcess":         "Some files already processed by contract, one moment and your collection will be ready to see the world",
+	"filesInProcess":         "Some files already processed by contract, one moment and your NFT will be ready to see the world",
 
 	// Outcomes
-	"collectionCreated": "Congrats! Your collection is minted and published",
+	"collectionCreated": "Congrats! Your NFT is minted and published",
 	"fail":              "Something went wrong, please retry in 5 minutes",
 }

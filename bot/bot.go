@@ -61,8 +61,8 @@ func (bot *Bot) Start() {
 	// When user taping "Create item"
 	bot.Handle(&btnCreateItem, bot.CreateItemHandler)
 
-	// When user taping "Create collection"
-	bot.Handle(&btnCreateCollection, bot.CreateCollectionHandler)
+	// // When user taping "Create collection"
+	// bot.Handle(&btnCreateCollection, bot.CreateCollectionHandler)
 
 	// When user is sending NFTs for collection
 	bot.Handle(tele.OnDocument, bot.OnDocumentHandler)
