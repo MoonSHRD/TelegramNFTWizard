@@ -91,7 +91,11 @@ func (bot *Bot) CreateCollectionHandler(c tele.Context) error {
 	}
 
 	// Display keyboard
-	return c.Send(messages["awaitingFiles"], completeFiles)
+	if user.IsSingleFile {
+		return c.Send(messages["awaitingFiles"])
+	} else {
+		return c.Send(messages["awaitingFiles"], completeFiles)
+	}
 }
 
 func (bot *Bot) OnDocumentHandler(c tele.Context) error {
@@ -141,9 +145,7 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 
 	user.FileIDs = append(user.FileIDs, filepath.Base(u.Path))
 
-	if err := c.Send("Saved file at "+telegraphLink, completeFiles); err != nil {
-		log.Println("failed to respond to user:", err)
-	}
+	log.Println("Saved file at " + telegraphLink)
 
 	// If limit reached force user to next step
 	if len(user.FileIDs) >= 10 {
