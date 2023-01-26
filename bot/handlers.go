@@ -66,7 +66,7 @@ func (bot *Bot) CreateItemHandler(c tele.Context) error {
 	}
 
 	// Display keyboard
-	return c.Send(messages["awaitingFiles"], completeFiles)
+	return c.Send(messages["awaitingFiles"])
 }
 
 func (bot *Bot) CreateCollectionHandler(c tele.Context) error {
@@ -91,11 +91,11 @@ func (bot *Bot) CreateCollectionHandler(c tele.Context) error {
 	}
 
 	// Display keyboard
-	if user.IsSingleFile {
-		return c.Send(messages["awaitingFiles"])
-	} else {
-		return c.Send(messages["awaitingFiles"], completeFiles)
-	}
+	// if user.IsSingleFile {
+	return c.Send(messages["awaitingFiles"])
+	// } else {
+	// return c.Send(messages["awaitingFiles"], completeFiles)
+	// }
 }
 
 func (bot *Bot) OnDocumentHandler(c tele.Context) error {
@@ -110,20 +110,44 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 		return bot.remindingResponse(c, user)
 	}
 
-	// If limit at the end fails
-	if len(user.FileIDs) >= 10 {
-		log.Println("file limit failed, promting manual complete button")
-		return c.Send(messages["filesLimitReached"], completeFiles)
+	return bot.handleFile(c, c.Message().Document.MediaFile())
+}
+
+func (bot *Bot) OnPhotoHandler(c tele.Context) error {
+	// Retrieve user
+	var user User
+	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
+		log.Println("failed to get user from kv:", err)
+		return c.Send(messages["fail"])
 	}
 
-	doc := c.Message().Document
+	if user.State != CollectionPreparation {
+		return bot.remindingResponse(c, user)
+	}
 
-	if doc.FileSize >= 5e+6 {
+	return bot.handleFile(c, c.Message().Photo.MediaFile())
+}
+
+func (bot *Bot) handleFile(c tele.Context, file *tele.File) error {
+	// Retrieve user
+	var user User
+	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
+		log.Println("failed to get user from kv:", err)
+		return c.Send(messages["fail"])
+	}
+
+	// If limit at the end fails
+	// if len(user.FileIDs) >= 10 {
+	// 	log.Println("file limit failed, promting manual complete button")
+	// 	return c.Send(messages["filesLimitReached"], completeFiles)
+	// }
+
+	if file.FileSize >= 5e+6 {
 		return c.Send(messages["fileSizeLimit"])
 	}
 
 	// Fetch image
-	reader, err := bot.File(doc.MediaFile())
+	reader, err := bot.File(file)
 	if err != nil {
 		log.Println("failed to get file from user:", err)
 		return c.Send(messages["fail"])
@@ -261,6 +285,23 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 	return bot.remindingResponse(c, user)
 }
 
+func (bot *Bot) OnCancel(c tele.Context) error {
+	// Retrieve user
+	var user User
+	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
+		log.Println("failed to get user from kv:", err)
+		return c.Send(messages["fail"])
+	}
+
+	// Reset user
+	if err := bot.ResetUser(c.Sender()); err != nil {
+		log.Println("failed to reset user:", err)
+		return c.Send(messages["fail"])
+	}
+
+	return bot.remindingResponse(c, user)
+}
+
 // Repeats current state message to user
 func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 	switch user.State {
@@ -273,11 +314,11 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		}
 
 	case CollectionPreparation:
-		if user.IsSingleFile {
-			return c.Send(messages["awaitingFiles"])
-		} else {
-			return c.Send(messages["awaitingFiles"], completeFiles)
-		}
+		// if user.IsSingleFile {
+		return c.Send(messages["awaitingFiles"])
+		// } else {
+		// return c.Send(messages["awaitingFiles"], completeFiles)
+		// }
 
 	case CollectionPreparationName:
 		return c.Send(messages["awaitingCollectionName"])
@@ -313,6 +354,7 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		mint := &tele.ReplyMarkup{}
 		mint.Inline(
 			mint.Row(mint.URL("Mint", url)),
+			mint.Row(btnCancel),
 		)
 		return c.Send(messages["awaitingCollectionMint"], mint)
 

@@ -4,15 +4,13 @@ import tele "gopkg.in/telebot.v3"
 
 // Keyboards
 var (
-	menu                = &tele.ReplyMarkup{}
-	btnCreateItem       = menu.Data("Create NFT item", "create_item")
-	// btnCreateCollection = menu.Data("Create collection", "create_collection")
-
-	completeFiles    = &tele.ReplyMarkup{}
-	btnCompleteFiles = completeFiles.Data("That's all files", "complete_files")
+	menu          = &tele.ReplyMarkup{}
+	btnCreateItem = menu.Data("Create NFT item", "create_item")
 
 	skip    = &tele.ReplyMarkup{}
 	btnSkip = skip.Data("Skip", "skip")
+
+	btnCancel = menu.Data("Cancel NFT creation", "cancel_nft_creation")
 )
 
 // Keyboards init
@@ -20,10 +18,6 @@ func init() {
 	menu.Inline(
 		menu.Row(btnCreateItem),
 		// menu.Row(btnCreateCollection),
-	)
-
-	completeFiles.Inline(
-		completeFiles.Row(btnCompleteFiles),
 	)
 
 	skip.Inline(

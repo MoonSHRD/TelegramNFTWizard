@@ -1,9 +1,11 @@
 package bot
 
 import (
+	"log"
 	"time"
 
 	"github.com/MoonSHRD/TelegramNFTWizard/config"
+	"github.com/MoonSHRD/TelegramNFTWizard/pkg/binary"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/blockchain"
 	"github.com/MoonSHRD/TelegramNFTWizard/pkg/kv"
 	tele "gopkg.in/telebot.v3"
@@ -61,14 +63,19 @@ func (bot *Bot) Start() {
 	// When user taping "Create item"
 	bot.Handle(&btnCreateItem, bot.CreateItemHandler)
 
-	// // When user taping "Create collection"
+	// When user taping "Create collection"
 	// bot.Handle(&btnCreateCollection, bot.CreateCollectionHandler)
 
 	// When user is sending NFTs for collection
 	bot.Handle(tele.OnDocument, bot.OnDocumentHandler)
 
+	// When user is sending NFTs for collection
+	bot.Handle(tele.OnPhoto, bot.OnPhotoHandler)
+
 	// When user taping "That's all files"
-	bot.Handle(&btnCompleteFiles, bot.OnCompleteFilesHandler)
+	// bot.Handle(&btnCompleteFiles, bot.OnCompleteFilesHandler)
+
+	bot.Handle(&btnCancel, bot.OnCancel)
 
 	// There should fall all text input steps
 	bot.Handle(tele.OnText, bot.OnTextHandler)
@@ -77,4 +84,16 @@ func (bot *Bot) Start() {
 	bot.Handle(&btnSkip, bot.SkipHandler)
 
 	bot.Bot.Start()
+}
+
+func (bot *Bot) ResetUser(r *tele.User) error {
+	if err := bot.kv.PutJson(binary.From(r.ID), UserDefaults()); err != nil {
+		log.Println("failed to put user in kv:", err)
+		_, err := bot.Send(r, messages["fail"])
+		if err != nil {
+			log.Println("failed to send fail message:", err)
+		}
+	}
+
+	return nil
 }

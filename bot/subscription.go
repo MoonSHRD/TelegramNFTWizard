@@ -17,7 +17,7 @@ func (bot *Bot) subscribe(r *tele.User, user User) error {
 	}
 
 	ctx := context.Background()
-	start := uint64(bot.createdAt)
+	start := uint64(user.StartedAt.Unix())
 	var sub *blockchain.Subscription
 	var err error
 	if user.IsSingleFile {
