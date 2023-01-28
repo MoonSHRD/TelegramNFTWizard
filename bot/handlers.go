@@ -52,7 +52,6 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 	}
 
 	if user.State != CollectionPreparation {
-		c.Send(messages["fileAlreadyProcessed"])
 		return bot.remindingResponse(c)
 	}
 
@@ -68,7 +67,6 @@ func (bot *Bot) OnPhotoHandler(c tele.Context) error {
 	}
 
 	if user.State != CollectionPreparation {
-		c.Send(messages["fileAlreadyProcessed"])
 		return bot.remindingResponse(c)
 	}
 
@@ -79,7 +77,7 @@ func (bot *Bot) handleFile(c tele.Context, file *tele.File) error {
 	bot.lp.Lock()
 	_, yes := bot.processing[c.Sender().ID]
 	if yes {
-		return nil
+		return c.Send(messages["fileAlreadyProcessed"])
 	}
 	bot.processing[c.Sender().ID] = struct{}{}
 	bot.lp.Unlock()
@@ -217,7 +215,11 @@ func (bot *Bot) OnCancel(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	return bot.remindingResponse(c)
+	if err := bot.remindingResponse(c); err != nil {
+		return err
+	}
+
+	return c.Respond()
 }
 
 // Repeats current state message to user
