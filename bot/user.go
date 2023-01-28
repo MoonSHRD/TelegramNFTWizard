@@ -11,10 +11,6 @@ const (
 	Freeroam State = "freeroam"
 	// User in files uploading step
 	CollectionPreparation State = "collectionPreparation"
-	// User in collection naming step
-	CollectionPreparationName State = "collectionPreparationName"
-	// User in collection symbol choosing step
-	CollectionPreparationSymbol State = "collectionPreparationSymbol"
 	// User in minting step
 	CollectionMint State = "collectionMint"
 )

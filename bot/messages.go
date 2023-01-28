@@ -5,14 +5,16 @@ var messages = map[string]string{
 	// Welcome step
 	"welcome":              "Hey, this bot is allowing you to create NFT",
 	"awaitingRegistration": "You are not registred yet, first attach your wallet to your tg account via this bot https://t.me/E_Passport_bot",
-	"collectionCreation":   `You in one step before your own NFT, just tap "Create NFT item" on keyboard`,
+	"collectionCreation":   `You in one step before your own NFT, just tap "Create NFT item"`,
 
 	// Uploading files step
-	"awaitingFiles":     "Send me a file which will be your NFT.",
-	"filesLimitReached": "Reached limit of files for collection",
-	"filesEmpty":        "No files was uploaded",
-	"fileSizeLimit":     "Collection cannot hold files bigger than 5MB, try compress or resize it",
-	"notAnImage":        "Not an image, supported extensions - 'png', 'jpg', 'webp'",
+	"awaitingFiles":        "Send me a file which will be your NFT.",
+	"fileProcessing":       "Processing file...",
+	"fileAlreadyProcessed": "You already uploaded file for NFT, if you want to upload different one, cancel and start over.",
+	"filesLimitReached":    "Reached limit of files for collection",
+	"filesEmpty":           "No files was uploaded",
+	"fileSizeLimit":        "Collection cannot hold files bigger than 5MB, try compress or resize it",
+	"notAnImage":           "Not an image, supported extensions - 'png', 'jpg', 'webp'",
 
 	// Text inputs step
 	"awaitingCollectionName":   "Choose name for collection, example 'Nice kitties'",

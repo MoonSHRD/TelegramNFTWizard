@@ -11,7 +11,10 @@ import (
 )
 
 func (bot *Bot) subscribe(r *tele.User, user User) error {
+	bot.ls.Lock()
 	_, exists := bot.subscriptions[r.ID]
+	bot.ls.Unlock()
+
 	if exists {
 		return nil
 	}
@@ -39,6 +42,10 @@ func (bot *Bot) subscribe(r *tele.User, user User) error {
 	}
 	user.SubscriptionInstance = bot.createdAt
 
+	bot.ls.Lock()
+	bot.subscriptions[r.ID] = sub
+	bot.ls.Unlock()
+
 	// Save user
 	if err := bot.kv.PutJson(binary.From(r.ID), user); err != nil {
 		log.Println("failed to put user in kv:", err)
@@ -62,7 +69,9 @@ func (bot *Bot) subscribe(r *tele.User, user User) error {
 		}
 
 		// Clear subscription
+		bot.ls.Lock()
 		delete(bot.subscriptions, r.ID)
+		bot.ls.Unlock()
 
 		// Reset user
 		if err := bot.kv.PutJson(binary.From(r.ID), UserDefaults()); err != nil {

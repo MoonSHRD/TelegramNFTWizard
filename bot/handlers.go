@@ -24,7 +24,7 @@ func (bot *Bot) StartHandler(c tele.Context) error {
 		}
 
 		// If user stuck he may do `/start` for troubleshooting
-		return bot.remindingResponse(c, user)
+		return bot.remindingResponse(c)
 	}
 
 	// New user
@@ -40,62 +40,7 @@ func (bot *Bot) StartHandler(c tele.Context) error {
 		log.Println("failed to respond to user:", err)
 	}
 
-	return bot.remindingResponse(c, user)
-}
-
-func (bot *Bot) CreateItemHandler(c tele.Context) error {
-	// Retrieve user
-	var user User
-	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
-		log.Println("failed to get user from kv:", err)
-		return c.Send(messages["fail"])
-	}
-
-	if user.State != Freeroam {
-		return bot.remindingResponse(c, user)
-	}
-
-	// Update state
-	user.State = CollectionPreparation
-	user.IsSingleFile = true
-
-	// Save user
-	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
-		log.Println("failed to put user in kv:", err)
-		return c.Send(messages["fail"])
-	}
-
-	// Display keyboard
-	return c.Send(messages["awaitingFiles"])
-}
-
-func (bot *Bot) CreateCollectionHandler(c tele.Context) error {
-	// Retrieve user
-	var user User
-	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
-		log.Println("failed to get user from kv:", err)
-		return c.Send(messages["fail"])
-	}
-
-	if user.State != Freeroam {
-		return bot.remindingResponse(c, user)
-	}
-
-	// Update state
-	user.State = CollectionPreparation
-
-	// Save user
-	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
-		log.Println("failed to put user in kv:", err)
-		return c.Send(messages["fail"])
-	}
-
-	// Display keyboard
-	// if user.IsSingleFile {
-	return c.Send(messages["awaitingFiles"])
-	// } else {
-	// return c.Send(messages["awaitingFiles"], completeFiles)
-	// }
+	return bot.remindingResponse(c)
 }
 
 func (bot *Bot) OnDocumentHandler(c tele.Context) error {
@@ -107,7 +52,8 @@ func (bot *Bot) OnDocumentHandler(c tele.Context) error {
 	}
 
 	if user.State != CollectionPreparation {
-		return bot.remindingResponse(c, user)
+		c.Send(messages["fileAlreadyProcessed"])
+		return bot.remindingResponse(c)
 	}
 
 	return bot.handleFile(c, c.Message().Document.MediaFile())
@@ -122,13 +68,32 @@ func (bot *Bot) OnPhotoHandler(c tele.Context) error {
 	}
 
 	if user.State != CollectionPreparation {
-		return bot.remindingResponse(c, user)
+		c.Send(messages["fileAlreadyProcessed"])
+		return bot.remindingResponse(c)
 	}
 
 	return bot.handleFile(c, c.Message().Photo.MediaFile())
 }
 
 func (bot *Bot) handleFile(c tele.Context, file *tele.File) error {
+	bot.lp.Lock()
+	_, yes := bot.processing[c.Sender().ID]
+	if yes {
+		return nil
+	}
+	bot.processing[c.Sender().ID] = struct{}{}
+	bot.lp.Unlock()
+
+	defer func(id int64) {
+		bot.lp.Lock()
+		delete(bot.processing, id)
+		bot.lp.Unlock()
+	}(c.Sender().ID)
+
+	if err := c.Send(messages["fileProcessing"]); err != nil {
+		return c.Send(messages["fail"])
+	}
+
 	// Retrieve user
 	var user User
 	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
@@ -136,12 +101,7 @@ func (bot *Bot) handleFile(c tele.Context, file *tele.File) error {
 		return c.Send(messages["fail"])
 	}
 
-	// If limit at the end fails
-	// if len(user.FileIDs) >= 10 {
-	// 	log.Println("file limit failed, promting manual complete button")
-	// 	return c.Send(messages["filesLimitReached"], completeFiles)
-	// }
-
+	// File size limit 5MB
 	if file.FileSize >= 5e+6 {
 		return c.Send(messages["fileSizeLimit"])
 	}
@@ -171,18 +131,6 @@ func (bot *Bot) handleFile(c tele.Context, file *tele.File) error {
 
 	log.Println("Saved file at " + telegraphLink)
 
-	// If limit reached force user to next step
-	if len(user.FileIDs) >= 10 {
-		user.State = CollectionPreparationName
-
-		// Save user
-		if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
-			log.Println("failed to put user in kv:", err)
-		}
-
-		return bot.remindingResponse(c, user)
-	}
-
 	if user.IsSingleFile {
 		user.State = CollectionMint
 
@@ -191,7 +139,7 @@ func (bot *Bot) handleFile(c tele.Context, file *tele.File) error {
 			log.Println("failed to put user in kv:", err)
 		}
 
-		return bot.remindingResponse(c, user)
+		return bot.remindingResponse(c)
 	}
 
 	// Save user
@@ -200,33 +148,6 @@ func (bot *Bot) handleFile(c tele.Context, file *tele.File) error {
 	}
 
 	return nil
-}
-
-func (bot *Bot) OnCompleteFilesHandler(c tele.Context) error {
-	// Retrieve user
-	var user User
-	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
-		log.Println("failed to get user from kv:", err)
-		return c.Send(messages["fail"])
-	}
-
-	if user.State != CollectionPreparation {
-		return bot.remindingResponse(c, user)
-	}
-
-	if len(user.FileIDs) == 0 {
-		return c.Send(messages["filesEmpty"])
-	}
-
-	// Updating step
-	user.State = CollectionPreparationName
-
-	// Save user
-	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
-		log.Println("failed to put user in kv:", err)
-	}
-
-	return bot.remindingResponse(c, user)
 }
 
 func (bot *Bot) OnTextHandler(c tele.Context) error {
@@ -238,15 +159,12 @@ func (bot *Bot) OnTextHandler(c tele.Context) error {
 	}
 
 	switch user.State {
-	case CollectionPreparationName:
-		// TODO: necessary checks on name validity
-		user.Name = c.Text()
-		user.State = CollectionPreparationSymbol
-	case CollectionPreparationSymbol:
-		// TODO: necessary checks on symbol validity
-		user.Symbol = c.Text()
-		user.State = CollectionMint
-		user.SubscriptionInstance = bot.createdAt
+
+	case Freeroam:
+		if c.Text() == btnCreateItemText {
+			return bot.createItemHandler(c)
+		}
+
 	default:
 		// In default case we do nothin' and responding with reminder
 	}
@@ -257,10 +175,10 @@ func (bot *Bot) OnTextHandler(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	return bot.remindingResponse(c, user)
+	return bot.remindingResponse(c)
 }
 
-func (bot *Bot) SkipHandler(c tele.Context) error {
+func (bot *Bot) createItemHandler(c tele.Context) error {
 	// Retrieve user
 	var user User
 	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
@@ -268,13 +186,13 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	if user.State != CollectionPreparationSymbol {
-		return bot.remindingResponse(c, user)
+	if user.State != Freeroam {
+		return bot.remindingResponse(c)
 	}
 
-	// Skip to mint
-	user.State = CollectionMint
-	user.SubscriptionInstance = bot.createdAt
+	// Update state
+	user.State = CollectionPreparation
+	user.IsSingleFile = true
 
 	// Save user
 	if err := bot.kv.PutJson(binary.From(c.Sender().ID), user); err != nil {
@@ -282,28 +200,34 @@ func (bot *Bot) SkipHandler(c tele.Context) error {
 		return c.Send(messages["fail"])
 	}
 
-	return bot.remindingResponse(c, user)
+	// Display keyboard
+	return c.Send(messages["awaitingFiles"])
 }
 
 func (bot *Bot) OnCancel(c tele.Context) error {
-	// Retrieve user
-	var user User
-	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
-		log.Println("failed to get user from kv:", err)
-		return c.Send(messages["fail"])
-	}
-
 	// Reset user
 	if err := bot.ResetUser(c.Sender()); err != nil {
 		log.Println("failed to reset user:", err)
 		return c.Send(messages["fail"])
 	}
 
-	return bot.remindingResponse(c, user)
+	var user User
+	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
+		log.Println("failed to get user from kv:", err)
+		return c.Send(messages["fail"])
+	}
+
+	return bot.remindingResponse(c)
 }
 
 // Repeats current state message to user
-func (bot *Bot) remindingResponse(c tele.Context, user User) error {
+func (bot *Bot) remindingResponse(c tele.Context) error {
+	var user User
+	if err := bot.kv.GetJson(binary.From(c.Sender().ID), &user); err != nil {
+		log.Println("failed to get user from kv:", err)
+		return c.Send(messages["fail"])
+	}
+
 	switch user.State {
 
 	case Freeroam:
@@ -314,28 +238,16 @@ func (bot *Bot) remindingResponse(c tele.Context, user User) error {
 		}
 
 	case CollectionPreparation:
-		// if user.IsSingleFile {
 		return c.Send(messages["awaitingFiles"])
-		// } else {
-		// return c.Send(messages["awaitingFiles"], completeFiles)
-		// }
-
-	case CollectionPreparationName:
-		return c.Send(messages["awaitingCollectionName"])
-
-	case CollectionPreparationSymbol:
-		return c.Send(messages["awaitingCollectionSymbol"], skip)
 
 	case CollectionMint:
-		var url string
-		var err error
-
-		err = bot.subscribe(c.Sender(), user)
+		err := bot.subscribe(c.Sender(), user)
 		if err != nil {
 			log.Println("failed to sub:", err)
 			return c.Send(messages["fail"])
 		}
 
+		var url string
 		if user.IsSingleFile {
 			if url, err = wizard.CreateSingleItemLink(user.FileIDs[0]); err != nil {
 				log.Println("failed to single item link:", err)
