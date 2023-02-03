@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 
 	"github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/FactoryNFT"
 	SingletonNFT "github.com/MoonSHRD/TelegramNFT-Wizard-Contracts/go/SingletonNFT"
@@ -12,6 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
+type SubscriptionArtefact struct {
+	TokenID string
+	Address string
+}
+
 type Subscription struct {
 	events    event.Subscription
 	sink      <-chan struct{}
@@ -19,7 +25,8 @@ type Subscription struct {
 	err       chan error
 	remaining int
 
-	tokens []string
+	l      *sync.Mutex
+	tokens []SubscriptionArtefact
 }
 
 // Remaining files count
@@ -32,7 +39,9 @@ func (sub *Subscription) Released() <-chan struct{} {
 	return sub.release
 }
 
-func (sub *Subscription) Tokens() []string {
+func (sub *Subscription) Tokens() []SubscriptionArtefact {
+	sub.l.Lock()
+	defer sub.l.Unlock()
 	return sub.tokens
 }
 
@@ -72,13 +81,19 @@ func (client *Client) SubscribeToItems(ctx context.Context, fileIDs []string, st
 		sink:      evSink,
 		release:   make(chan struct{}),
 		err:       make(chan error, 1),
-		tokens:    []string{},
+		l:         &sync.Mutex{},
+		tokens:    []SubscriptionArtefact{},
 	}
 
 	// Simple pass through signal channel
 	go func() {
 		for ev := range sink {
-			sub.tokens = append(sub.tokens, ev.TokenId.String())
+			sub.l.Lock()
+			sub.tokens = append(sub.tokens, SubscriptionArtefact{
+				TokenID: ev.TokenId.String(),
+				Address: ev.Raw.Address.Hex(),
+			})
+			sub.l.Unlock()
 			evSink <- struct{}{}
 		}
 	}()
@@ -109,12 +124,19 @@ func (client *Client) SubscribeToCreator(ctx context.Context, creator common.Add
 		sink:      evSink,
 		release:   make(chan struct{}),
 		err:       make(chan error, 1),
+		l:         &sync.Mutex{},
+		tokens:    []SubscriptionArtefact{},
 	}
 
 	// Simple pass through signal channel
 	go func() {
 		for ev := range sink {
-			sub.tokens = append(sub.tokens, ev.Collection.String())
+			sub.l.Lock()
+			sub.tokens = append(sub.tokens, SubscriptionArtefact{
+				TokenID: ev.Collection.String(),
+				Address: ev.Raw.Address.Hex(),
+			})
+			sub.l.Unlock()
 			evSink <- struct{}{}
 		}
 	}()

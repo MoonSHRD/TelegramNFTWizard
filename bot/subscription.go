@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
@@ -62,8 +63,13 @@ func (bot *Bot) subscribe(r *tele.User, user User) error {
 			return
 		}
 
+		var res []string
+		for _, t := range sub.Tokens() {
+			res = append(res, fmt.Sprintf("tokenID: %s\naddress: %s", t.TokenID, t.Address))
+		}
+
 		// Success
-		_, err := bot.Send(r, messages["collectionCreated"]+"\ntokenID: "+strings.Join(sub.Tokens(), "\n"))
+		_, err := bot.Send(r, messages["collectionCreated"]+strings.Join(res, "\n\n"))
 		if err != nil {
 			log.Println("failed to send collection created message:", err)
 		}
